@@ -145,14 +145,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Demo Chunk */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '2px' }}>
-            Nạp dữ liệu mẫu
+            Nạp dữ liệu
           </p>
           <button 
             className="btn-gold-outline" 
             onClick={onIngestDemo}
             disabled={ingesting || dbStatus === null}
           >
-            {ingesting ? 'Đang xử lý...' : 'Tải demo_chunk.json'}
+            {ingesting ? 'Đang xử lý...' : 'Ingestion'}
           </button>
         </div>
 

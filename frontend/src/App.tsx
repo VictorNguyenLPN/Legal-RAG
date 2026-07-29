@@ -229,7 +229,7 @@ function App() {
             {searchResult && !searchResult.error && searchResult.status !== 'empty_db' && (
               <div>
                 {searchResult.answer && <AnswerCard answer={searchResult.answer} />}
-                {searchResult.sources && <Citations sources={searchResult.sources} />}
+                {/* {searchResult.sources && <Citations sources={searchResult.sources} />} */}
                 {searchResult.sources && <SourceDetails sources={searchResult.sources} />}
               </div>
             )}

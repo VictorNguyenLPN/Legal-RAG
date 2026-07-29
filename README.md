@@ -10,13 +10,13 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toà
   - **Dense search:** `gemini-embedding-2` + `cosine similarity`.
   - **Sparse search:** `BM25`
 
-- **Xếp hạng dung hợp RRF:** Kết hợp, tối ưu kết quả từ Dense và Sparse Search theo cơ chế xếp hạng nghịch đảo.
+- **Xếp hạng dung hợp RRF:** Kết hợp, tối ưu kết quả từ Dense và Sparse Search.
 
 - **Cơ sở dữ liệu Vector:** Cục bộ `.npy` và metadata trong file JSON.
 
-- **Trả lời & Trích dẫn Nguồn chính xác:** Mô hình `gemini-2.5-flash` được kiểm soát để trả lời chỉ dựa vào ngữ cảnh và trích dẫn chi tiết nguồn.
+- **LLM**: `gemini-2.5-flash`.
 
-- **Giao diện Trực quan:** `Streamlit Web UI`.
+- **Giao diện Trực quan:** `React` + `TailwindCSS`.
 
 ---
 
@@ -42,7 +42,8 @@ Law-RAG/
 │       ├── config.py             # Cấu hình biến môi trường & Siêu tham số
 │       └── main.py               # Khởi chạy FastAPI App
 ├── frontend/
-│   └── app.py                    # Giao diện Streamlit UI
+│   └── app.tsx                   # Giao diện React
+│   └── ...                       # Các component khác
 ├── data/
 │   ├── input/                    # Thư mục chứa dữ liệu JSON đầu vào
 │   └── db/                       # Lưu trữ CSDL cục bộ (.npy và chunks.json)
@@ -86,15 +87,17 @@ PYTHONPATH=. .venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 -
 ```
 > API docs (Swagger UI) sẽ khả dụng tại: http://localhost:8000/docs
 
-### 4. Khởi chạy Streamlit Frontend
+### 4. Khởi chạy Frontend
 
 ```bash
-.venv/bin/streamlit run frontend/app.py
+cd frontend && npm run dev
 ```
-> Giao diện Web UI sẽ tự động mở tại: http://localhost:8501
+> Giao diện Web UI sẽ tự động mở tại: http://localhost:5173/
 
 ---
 
 ## Lịch sử phiên bản
 
 - v1.0.0 (29/07/2026): MVP version với Corpus nhỏ
+
+- v1.1.0 (29/08/2026): Cập nhật corpus luật hình sự, sửa ui phần trích dẫn, thêm markdown render,

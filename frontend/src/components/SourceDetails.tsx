@@ -20,7 +20,7 @@ export const SourceDetails: React.FC<SourceDetailsProps> = ({ sources }) => {
 
   return (
     <div>
-      <h3 className="source-section-title">Nguồn Trích Dẫn Chi Tiết (RRF Hybrid Search)</h3>
+      <h3 className="source-section-title">Nguồn Trích Dẫn</h3>
       <div className="accordion-list">
         {sources.map((src, idx) => {
           const isExpanded = !!expandedIndices[idx];
@@ -37,9 +37,9 @@ export const SourceDetails: React.FC<SourceDetailsProps> = ({ sources }) => {
             >
               <div className="accordion-header" onClick={() => toggleExpand(idx)}>
                 <div className="accordion-header-left">
-                  <span className="accordion-badge">Top {idx + 1}</span>
+                  <span className="accordion-badge">{idx + 1}</span>
                   <span className="accordion-title-text">
-                    {art} - {doc} (Điểm RRF: {score.toFixed(5)})
+                    {art} - {doc}
                   </span>
                 </div>
                 <ChevronDown className="accordion-arrow" />
@@ -49,7 +49,7 @@ export const SourceDetails: React.FC<SourceDetailsProps> = ({ sources }) => {
                   <div className="chunk-text">{src.text}</div>
                   <div className="chunk-meta">
                     <span>
-                      Mã phân mảnh: <code>{src.chunk_id}</code>
+                      Chunk ID: <code>{src.chunk_id}</code>
                     </span>
                     <span>
                       Vị trí: {clause || 'N/A'} | {point || 'N/A'}
