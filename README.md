@@ -110,31 +110,59 @@ cd frontend && npm run dev
 Để nạp tài liệu pháp luật của riêng bạn vào hệ thống, hãy chuẩn bị một tệp tin định dạng `.json` chứa danh sách các phân mảnh (chunks).
 
 #### Định dạng JSON Schema của dữ liệu đầu vào:
+
 Tệp tin JSON phải là một mảng các đối tượng (array of objects), mỗi đối tượng đại diện cho một phân mảnh văn bản pháp lý với cấu trúc mẫu như sau:
 
 ```json
 [
   {
-    "text": "Người nào thực hiện hành vi cướp tài sản của người khác bằng cách dùng vũ lực, đe dọa dùng vũ lực ngay tức khắc hoặc có hành vi khác làm cho người bị tấn công lâm vào tình trạng không thể chống cự được nhằm chiếm đoạt tài sản, thì bị phạt tù từ 03 năm đến 10 năm.",
+    "chunk_id": "law_7eef1c6f9712c9a77af24be877851ca1_a1",
+    "node_type": "article",
     "metadata": {
-      "document_title": "Bộ luật Hình sự số 100/2015/QH13",
-      "hierarchy_path": ["Chương XIV", "Mục 1", "Điều 168"],
-      "article_title": "Tội cướp tài sản",
-      "article_number": 168,
-      "clause_number": 1,
-      "point": null
-    }
-  },
-  {
-    "text": "Chuẩn bị phạm tội này, thì bị phạt tù từ 01 năm đến 05 năm.",
-    "metadata": {
-      "document_title": "Bộ luật Hình sự số 100/2015/QH13",
-      "hierarchy_path": ["Chương XIV", "Mục 1", "Điều 168"],
-      "article_title": "Tội cướp tài sản",
-      "article_number": 168,
-      "clause_number": 6,
-      "point": null
-    }
+      "document_id": "7eef1c6f9712c9a77af24be877851ca1",
+      "document_type": "Bộ luật",
+      "document_title": "Bộ luật Hình sự số 15/1999/QH10",
+      "doc_identity": "15/1999/QH10",
+      "major_names": [
+        "Tư pháp"
+      ],
+      "field_names": [
+        "Chưa phân loại"
+      ],
+      "issue_date": "1999-12-21",
+      "effect_date": "2000-07-01",
+      "effect_status_name": "Hết hiệu lực toàn bộ",
+      "expire_date": "2018-01-01",
+      "organ_names": [
+        "Quốc hội"
+      ],
+      "signer_title_names": [
+        "Chủ tịch Quốc hội"
+      ],
+      "signer_names": [
+        "Nông Đức Mạnh"
+      ],
+      "vbpl_url": "https://vbpl.vn/van-ban/chi-tiet/bo-luat-hinh-su-so-15-1999-qh10--6157",
+      "source_guid": null,
+      "scraped_date": "2026-07-01T20:04:58.071402+07:00",
+      "part_number": null,
+      "part_title": null,
+      "chapter_number": "I",
+      "chapter_title": "ĐIỀU KHOẢN CƠ BẢN",
+      "section_number": null,
+      "section_title": null,
+      "article_number": 1,
+      "article_title": "Nhiệm vụ của Bộ luật hình sự",
+      "clause_number": null,
+      "clause_title": "Bộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội.",
+      "point": null,
+      "hierarchy_path": [
+        "7eef1c6f9712c9a77af24be877851ca1",
+        "Chương I",
+        "Điều 1"
+      ]
+    },
+    "text": "Nhiệm vụ của Bộ luật hình sự\nBộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội."
   }
 ]
 ```
@@ -163,3 +191,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v1.1.0 (29/07/2026): Cập nhật corpus luật hình sự, sửa ui phần trích dẫn, thêm markdown render
 
 - v2.0.0 (30/07/2026): Xử lý logic khi LLM không tìm thấy thông tin, chỉnh sửa giao diện, update conversation message, sửa prompt cho hội thoại cá nhân, ảnh demo
+
+- v2.1.0 (30/07/2026): Update demo corpus
