@@ -12,18 +12,13 @@ logger = logging.getLogger(__name__)
 
 class RAGService:
     SYSTEM_INSTRUCTION = (
-        "Bạn là một trợ lý pháp lý AI chuyên nghiệp. Nhiệm vụ của bạn là trả lời câu hỏi của người dùng "
-        "một cách chính xác dựa trên các ngữ cảnh (context) pháp luật được cung cấp.\n\n"
-        "Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:\n"
-        "1. Chỉ trả lời dựa vào thông tin có trong ngữ cảnh được cung cấp. Không tự ý thêm bớt, suy diễn ngoài ngữ cảnh.\n"
-        "2. Nếu ngữ cảnh không chứa đủ thông tin để trả lời câu hỏi, hãy trả lời rõ ràng rằng: "
-        "\"Tôi không tìm thấy thông tin phù hợp trong cơ sở dữ liệu pháp luật được cung cấp.\"\n"
-        "3. Với mỗi thông tin đưa ra trong câu trả lời, bắt buộc phải trích dẫn nguồn rõ ràng trong ngoặc đơn bao gồm:\n"
-        "   - Tên văn bản (ví dụ: Bộ luật Hình sự số 15/1999/QH10)\n"
-        "   - Điều (ví dụ: Điều 98)\n"
-        "   - Khoản (ví dụ: Khoản 1)\n"
-        "   - Điểm (nếu có, ví dụ: Điểm a)\n"
-        "   Ví dụ trích dẫn: (Quyết định số 27/2016/QĐ-UBND, Điều 4, Khoản 2, Điểm a).\n"
+        "Bạn là một trợ lý pháp lý AI chuyên nghiệp. Nhiệm vụ của bạn là hỗ trợ và trả lời các câu hỏi của người dùng một cách chính xác.\n\n"
+        "Hãy tuân thủ các nguyên tắc sau:\n"
+        "1. Đối với các câu hỏi về pháp luật: Chỉ trả lời dựa vào thông tin có trong ngữ cảnh (context) pháp luật được cung cấp. Không tự ý thêm bớt, suy diễn ngoài ngữ cảnh. "
+        "Nếu ngữ cảnh pháp luật không chứa đủ thông tin để trả lời, hãy trả lời rõ ràng là: \"Tôi không tìm thấy thông tin phù hợp trong cơ sở dữ liệu pháp luật được cung cấp.\"\n"
+        "2. Đối với các thông tin cá nhân của người dùng (như tên, tuổi, thông tin người dùng đã chia sẻ trực tiếp trong cuộc hội thoại) hoặc các câu chào hỏi, giao tiếp thông thường: "
+        "Hãy trả lời một cách tự nhiên và chính xác dựa trên Lịch sử cuộc hội thoại được cung cấp, không áp dụng nguyên tắc từ chối của câu hỏi pháp luật.\n"
+        "3. Với mỗi thông tin pháp lý đưa ra trong câu trả lời, bắt buộc phải trích dẫn nguồn rõ ràng trong ngoặc đơn bao gồm: Tên văn bản, Điều, Khoản, Điểm (ví dụ: (Bộ luật Hình sự số 15/1999/QH10, Điều 168, Khoản 1)).\n"
         "4. Trình bày câu trả lời rõ ràng, logic, đúng văn phong pháp lý, định dạng Markdown."
     )
 
@@ -57,7 +52,7 @@ class RAGService:
             return 0
         
         # Limit to 100 chunks for demo purposes
-        chunks = chunks[:1000]
+        # chunks = chunks[:1000]
         
         logger.info(f"Ingesting {len(chunks)} chunks...")
         
@@ -77,9 +72,38 @@ class RAGService:
         logger.info(f"Successfully saved {len(chunks)} chunks & embeddings.")
         return len(chunks)
 
-    def query(self, user_query: str) -> Dict[str, Any]:
+    def condense_query(self, user_query: str, history: List[Dict[str, str]]) -> str:
         """
-        Full hybrid search + generation pipeline.
+        Condenses a user's follow-up query with the conversation history into a standalone query.
+        """
+        history_str = ""
+        for msg in history:
+            role_label = "Người dùng" if msg["role"] == "user" else "Trợ lý AI"
+            history_str += f"{role_label}: {msg['content']}\n"
+            
+        prompt = (
+            "Dựa vào lịch sử hội thoại pháp lý dưới đây và câu hỏi mới nhất của người dùng, "
+            "hãy viết lại câu hỏi mới này thành một câu hỏi độc lập (standalone question) bằng tiếng Việt, "
+            "đầy đủ ngữ cảnh để có thể dùng tìm kiếm trực tiếp trong cơ sở dữ liệu pháp luật. "
+            "Không tự trả lời câu hỏi, không thêm bất kỳ văn bản giải thích hoặc dẫn nhập nào, "
+            "chỉ trả về duy nhất câu hỏi đã được viết lại.\n\n"
+            f"Lịch sử hội thoại:\n{history_str}\n"
+            f"Câu hỏi mới nhất: {user_query}\n\n"
+            "Câu hỏi độc lập:"
+        )
+        try:
+            condensed = gemini_service.generate_answer(prompt=prompt)
+            condensed_clean = condensed.strip()
+            if condensed_clean:
+                logger.info(f"Condensed query: '{user_query}' -> '{condensed_clean}'")
+                return condensed_clean
+        except Exception as e:
+            logger.error(f"Error in query condensation: {e}")
+        return user_query
+
+    def query(self, user_query: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
+        """
+        Full hybrid search + generation pipeline with history support.
         """
         if vector_db.is_empty():
             return {
@@ -87,12 +111,17 @@ class RAGService:
                 "sources": []
             }
 
+        # 0. Condense query if chat history exists
+        search_query = user_query
+        if history:
+            search_query = self.condense_query(user_query, history)
+
         # 1. Dense Search
-        query_vector = gemini_service.get_embedding(user_query)
+        query_vector = gemini_service.get_embedding(search_query)
         dense_results = dense_search(query_vector, top_k=settings.DENSE_TOP_K)
 
         # 2. Sparse Search
-        sparse_results = sparse_search.search(user_query, top_k=settings.SPARSE_TOP_K)
+        sparse_results = sparse_search.search(search_query, top_k=settings.SPARSE_TOP_K)
 
         # 3. Reciprocal Rank Fusion (RRF)
         fused_results = reciprocal_rank_fusion(
@@ -141,20 +170,58 @@ class RAGService:
 
         contexts_text = "\n\n".join(contexts_text_list)
         
-        # 5. Build full prompt
+        # 5. Build conversation history text if present
+        history_text = ""
+        if history:
+            history_text = "Lịch sử cuộc hội thoại trước đó:\n"
+            for msg in history:
+                role_label = "Người dùng" if msg["role"] == "user" else "Trợ lý AI"
+                history_text += f"- {role_label}: {msg['content']}\n"
+            history_text += "\n"
+
+        # 6. Build full prompt
         prompt = (
             f"Ngữ cảnh pháp luật được cung cấp:\n"
             f"=================================\n"
             f"{contexts_text}\n"
             f"=================================\n\n"
-            f"Câu hỏi: {user_query}"
+            f"{history_text}"
+            f"Câu hỏi tiếp theo của Người dùng: {user_query}"
         )
 
-        # 6. Generate answer using Gemini 2.5 Flash
+        # 7. Generate answer using Gemini 2.5 Flash
         answer = gemini_service.generate_answer(
             prompt=prompt,
             system_instruction=self.SYSTEM_INSTRUCTION
         )
+
+        print(answer)
+
+        # Clear sources if the LLM states it cannot find the relevant information,
+        # or if the response is purely conversational and contains no legal citations.
+        fallback_markers = [
+            "Tôi không tìm thấy thông tin phù hợp",
+            "không tìm thấy thông tin phù hợp",
+            "không có thông tin phù hợp"
+        ]
+        
+        import re
+        has_legal_content = False
+        
+        # 1. Capitalized Điều or Khoản followed by a number (e.g., Điều 168, Khoản 2)
+        if re.search(r"(Điều|Khoản)\s+\d+", answer):
+            has_legal_content = True
+        # 2. Parenthesized citation containing legal keywords
+        elif re.search(r"\(([^)]*(Điều|Khoản|Bộ luật|Luật|Quyết định|Thông tư|Nghị định)[^)]*)\)", answer):
+            has_legal_content = True
+        # 3. Capitalized document type keywords (case-sensitive)
+        else:
+            capital_keywords = ["Bộ luật", "Quyết định", "Thông tư", "Nghị định", "Hiến pháp"]
+            if any(kw in answer for kw in capital_keywords):
+                has_legal_content = True
+                
+        if any(marker in answer for marker in fallback_markers) or not has_legal_content:
+            sources = []
 
         return {
             "answer": answer,

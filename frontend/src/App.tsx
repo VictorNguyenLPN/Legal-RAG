@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Sidebar } from './components/Sidebar';
 import type { DBStatus } from './components/Sidebar';
 import { Header } from './components/Header';
 import { SearchForm } from './components/SearchForm';
-import { AnswerCard } from './components/AnswerCard';
-import { Citations } from './components/Citations';
 import type { Source } from './components/Citations';
 import { SourceDetails } from './components/SourceDetails';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const DEMO_FILE_PATH = '/home/nguyen-quang-huy/Github/Law-RAG/demo_chunk.json';
 
-interface SearchResult {
-  answer?: string;
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
   sources?: Source[];
-  error?: string;
-  status?: 'empty_db';
 }
 
 interface Toast {
@@ -27,10 +26,11 @@ function App() {
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [ingesting, setIngesting] = useState(false);
-  const [query, setQuery] = useState('');
-  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'info') => {
@@ -127,25 +127,43 @@ function App() {
     }
   };
 
-  // Execute query RAG search
+  // Execute query RAG search (send chat message)
   const handleSearch = async (searchQuery: string) => {
-    setQuery(searchQuery);
     if (!dbStatus || !dbStatus.database_initialized) {
-      setSearchResult({ status: 'empty_db' });
+      showToast('Thư viện pháp luật chưa được lập chỉ mục. Vui lòng nạp dữ liệu trước.', 'error');
       return;
     }
 
+    const userMsgId = Date.now().toString();
+    const assistantMsgId = (Date.now() + 1).toString();
+
+    // 1. Add user message
+    const newUserMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: searchQuery
+    };
+
+    setMessages((prev) => [...prev, newUserMsg]);
     setLoadingSearch(true);
-    setSearchResult(null);
+
     try {
-      // Set a 45 second timeout simulation
+      // Format chat history (excluding the message we're currently sending)
+      const historyPayload = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 45000);
 
       const res = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({
+          query: searchQuery,
+          history: historyPayload
+        }),
         signal: controller.signal,
       });
 
@@ -153,27 +171,54 @@ function App() {
 
       if (res.ok) {
         const data = await res.json();
-        setSearchResult(data);
+        const newAssistantMsg: ChatMessage = {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: data.answer || 'Không tìm thấy câu trả lời phù hợp.',
+          sources: data.sources || []
+        };
+        setMessages((prev) => [...prev, newAssistantMsg]);
       } else {
         const errorData = await res.json().catch(() => ({}));
-        setSearchResult({ 
-          error: `Yêu cầu thất bại: ${errorData.detail || 'Không rõ lỗi'}` 
-        });
+        const newErrorMsg: ChatMessage = {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: `⚠️ **Lỗi hệ thống:** ${errorData.detail || 'Phản hồi thất bại từ máy chủ.'}`
+        };
+        setMessages((prev) => [...prev, newErrorMsg]);
       }
     } catch (err: any) {
+      let message = 'Không thể kết nối tới dịch vụ phân tích. Vui lòng kiểm tra lại backend.';
       if (err.name === 'AbortError') {
-        setSearchResult({ 
-          error: 'Thời gian phản hồi từ máy chủ quá hạn. Vui lòng thử lại sau.' 
-        });
-      } else {
-        setSearchResult({ 
-          error: 'Không thể kết nối tới dịch vụ phân tích. Vui lòng kiểm tra lại backend.' 
-        });
+        message = 'Thời gian phản hồi từ máy chủ quá hạn. Vui lòng thử lại sau.';
       }
+
+      const newErrorMsg: ChatMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: `⚠️ **Lỗi kết nối:** ${message}`
+      };
+      setMessages((prev) => [...prev, newErrorMsg]);
+      showToast(message, 'error');
     } finally {
       setLoadingSearch(false);
     }
   };
+
+  // Reset chat history
+  const handleResetChat = () => {
+    setMessages([]);
+    showToast('Đã làm mới cuộc hội thoại.', 'success');
+  };
+
+  // Auto scroll to bottom of chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loadingSearch]);
 
   return (
     <div className="app-container">
@@ -185,78 +230,69 @@ function App() {
         onIngestDemo={handleIngestDemo}
         onIngestCustom={handleIngestCustom}
         ingesting={ingesting}
+        onResetChat={handleResetChat}
+        chatLength={messages.length}
       />
 
       {/* Main Panel */}
-      <div className="main-panel">
-        <Header />
-        
-        <SearchForm 
-          onSearch={handleSearch} 
-          loading={loadingSearch} 
-          disabled={dbStatus === null}
-          initialQuery={query}
+      <div className="main-panel" style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '2rem 3rem' }}>
+        {messages.length === 0 && <Header />}
+
+        {/* Chat / Content Area */}
+        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: 0, paddingRight: '4px' }}>
+
+          {messages.length === 0 ? (
+            <></>
+          ) : (
+            <div className="chat-history-container" style={{ maxHeight: 'none', flexGrow: 1, border: 'none', background: 'transparent', padding: 0 }}>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`chat-message-item ${msg.role}`}>
+                  <span className="chat-sender-label">
+                    {msg.role === 'user' ? 'Bạn' : 'Trợ lý AI'}
+                  </span>
+
+                  <div className={`chat-bubble ${msg.role}`}>
+                    {msg.role === 'user' ? (
+                      <div>{msg.content}</div>
+                    ) : (
+                      <div className="legal-opinion-text" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: '1.7' }}>
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+
+                        {msg.sources && msg.sources.length > 0 && (
+                          <div className="chat-sources-wrapper">
+                            <SourceDetails sources={msg.sources} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {loadingSearch && (
+                <div className="chat-message-item assistant">
+                  <span className="chat-sender-label">Trợ lý AI</span>
+                  <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '1rem 1.5rem', width: 'auto' }}>
+                    <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px', margin: 0 }}></div>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
+                      Đang suy nghĩ ...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Form at Bottom */}
+        <SearchForm
+          onSearch={handleSearch}
+          loading={loadingSearch}
+          disabled={dbStatus === null || !dbStatus.database_initialized}
+          initialQuery=""
         />
-
-        {/* Dynamic Display Area */}
-        {loadingSearch && (
-          <div className="loader-container">
-            <div className="spinner"></div>
-            <div className="loader-text">Hệ thống đang đối chiếu cơ sở dữ liệu pháp luật...</div>
-          </div>
-        )}
-
-        {!loadingSearch && query && (
-          <div>
-            {searchResult?.status === 'empty_db' && (
-              <div className="tip-box warning">
-                <div className="tip-icon danger">⚠️</div>
-                <div className="tip-title danger">Dữ liệu trống</div>
-                <div className="tip-desc">
-                  Thư viện pháp luật chưa được lập chỉ mục. Hãy nạp tài liệu từ thanh quản lý bên trái để tiếp tục.
-                </div>
-              </div>
-            )}
-
-            {searchResult?.error && (
-              <div className="tip-box warning">
-                <div className="tip-icon danger">⚠️</div>
-                <div className="tip-title danger">Lỗi hệ thống</div>
-                <div className="tip-desc">{searchResult.error}</div>
-              </div>
-            )}
-
-            {searchResult && !searchResult.error && searchResult.status !== 'empty_db' && (
-              <div>
-                {searchResult.answer && <AnswerCard answer={searchResult.answer} />}
-                {/* {searchResult.sources && <Citations sources={searchResult.sources} />} */}
-                {searchResult.sources && <SourceDetails sources={searchResult.sources} />}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!loadingSearch && !query && (
-          <div>
-            {dbStatus && dbStatus.database_initialized ? (
-              <div className="tip-box">
-                <div className="tip-icon">⚖️</div>
-                <div className="tip-title">Hệ Thống Đã Sẵn Sàng</div>
-                <div className="tip-desc">
-                  Vui lòng nhập câu hỏi pháp lý của bạn ở thanh công cụ phía trên. Trợ lý sẽ tự động tìm kiếm điều khoản phù hợp và đưa ra phân tích chi tiết.
-                </div>
-              </div>
-            ) : (
-              <div className="tip-box warning">
-                <div className="tip-icon danger">⚠️</div>
-                <div className="tip-title danger">Thiếu Cơ Sở Dữ Liệu</div>
-                <div className="tip-desc">
-                  Vui lòng nhấn nút <strong>"Tải demo_chunk.json"</strong> ở thanh quản lý bên trái để nạp dữ liệu mẫu trước khi đặt câu hỏi.
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Floating Toast Notification */}

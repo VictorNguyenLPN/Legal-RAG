@@ -76,7 +76,10 @@ async def query_rag(payload: QueryRequest):
         )
         
     try:
-        result = rag_service.query(payload.query)
+        history_list = None
+        if payload.history:
+            history_list = [{"role": msg.role, "content": msg.content} for msg in payload.history]
+        result = rag_service.query(payload.query, history_list)
         return QueryResponse(
             answer=result["answer"],
             sources=result["sources"]

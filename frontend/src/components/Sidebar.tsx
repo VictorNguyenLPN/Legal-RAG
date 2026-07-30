@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileJson, X, RefreshCw } from 'lucide-react';
+import { Upload, FileJson, X, RefreshCw, MessageSquare, Trash2 } from 'lucide-react';
 
 export interface DBStatus {
   database_initialized: boolean;
@@ -14,6 +14,8 @@ interface SidebarProps {
   onIngestDemo: () => Promise<void>;
   onIngestCustom: (chunks: any[]) => Promise<void>;
   ingesting: boolean;
+  onResetChat: () => void;
+  chatLength: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,6 +25,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onIngestDemo,
   onIngestCustom,
   ingesting,
+  onResetChat,
+  chatLength,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedChunks, setParsedChunks] = useState<any[] | null>(null);
@@ -115,10 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="status-box">
             <div className="status-line">
               <span className="status-dot inactive"></span>
-              <span>Backend: Mất kết nối</span>
-            </div>
-            <div className="status-subtext">
-              Hãy chắc chắn cổng 8000 đang được mở và ứng dụng backend đang hoạt động.
+              <span>Backend: Disconnect</span>
             </div>
           </div>
         ) : (
@@ -211,6 +212,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Conversation Section */}
+      <div className="sidebar-section" style={{ marginTop: 'auto' }}>
+        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* <MessageSquare size={18} style={{ color: 'var(--color-gold)' }} /> */}
+          <span>Hội Thoại</span>
+        </div>
+        <p className="sidebar-desc">
+          Lịch sử chat được lưu trữ tạm thời trong phiên làm việc hiện tại.
+        </p>
+        <button 
+          className="btn-gold-outline" 
+          onClick={onResetChat}
+          disabled={chatLength === 0}
+          style={{ 
+            marginTop: '0.5rem', 
+            borderColor: chatLength > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(197, 168, 128, 0.2)',
+            color: chatLength > 0 ? '#FCA5A5' : 'var(--color-text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          <Trash2 size={16} />
+          <span>Xóa lịch sử chat</span>
+        </button>
       </div>
       
       {/* CSS Animation Keyframes for Refresh button */}

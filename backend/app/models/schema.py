@@ -29,8 +29,13 @@ class Chunk(BaseModel):
 class IngestFileRequest(BaseModel):
     file_path: str = Field(..., description="Path to local JSON file containing chunks")
 
+class Message(BaseModel):
+    role: str = Field(..., description="Role of the sender: user or assistant")
+    content: str = Field(..., description="Content of the message")
+
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, description="User legal question")
+    history: Optional[List[Message]] = Field(default=None, description="Conversation history")
 
 # --- Output Models ---
 

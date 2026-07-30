@@ -25,12 +25,12 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     e.preventDefault();
     if (query.trim() && !loading && !disabled) {
       onSearch(query.trim());
+      setQuery('');
     }
   };
 
   return (
     <div className="search-container">
-      <label className="search-label">Nhập câu hỏi pháp lý của bạn:</label>
       <form onSubmit={handleSubmit} className="search-form">
         <div className="search-input-wrapper">
           <Search className="search-icon" />
@@ -48,7 +48,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           className="btn-search"
           disabled={!query.trim() || loading || disabled}
         >
-          {loading ? 'Đang tra cứu...' : 'Tìm kiếm / Tra cứu'}
+          {loading ? 'Đang trả lời...' : 'Gửi câu hỏi'}
         </button>
       </form>
       <p 
@@ -60,7 +60,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           paddingLeft: '4px' 
         }}
       >
-        Nhập tình huống thực tế hoặc điều khoản cần đối chiếu để trợ lý phân tích văn bản pháp luật tương quan.
+        Nhập tình huống thực tế, điều khoản, luật hoặc thắc mắc về pháp lý.
       </p>
     </div>
   );

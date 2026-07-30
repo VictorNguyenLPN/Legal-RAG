@@ -20,6 +20,17 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toà
 
 ---
 
+## Giao diện
+
+### Giao diện chính khi chưa có dữ liệu
+![Giao diện chính](images/1.png)
+
+### Giao diện khi có câu hỏi
+![Giao diện chính](images/2.png)
+
+### Giao diện câu trả lời và trích dẫn
+![Giao diện chính](images/3.png)
+
 ## Cấu trúc Thư mục
 
 ```text
@@ -100,4 +111,6 @@ cd frontend && npm run dev
 
 - v1.0.0 (29/07/2026): MVP version với Corpus nhỏ
 
-- v1.1.0 (29/08/2026): Cập nhật corpus luật hình sự, sửa ui phần trích dẫn, thêm markdown render,
+- v1.1.0 (29/07/2026): Cập nhật corpus luật hình sự, sửa ui phần trích dẫn, thêm markdown render
+
+- v2.0.0 (30/07/2026): Xử lý logic khi LLM không tìm thấy thông tin, chỉnh sửa giao diện, update conversation message, sửa prompt cho hội thoại cá nhân, ảnh demo
