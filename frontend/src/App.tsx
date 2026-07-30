@@ -8,7 +8,6 @@ import type { Source } from './components/Citations';
 import { SourceDetails } from './components/SourceDetails';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const DEMO_FILE_PATH = '/home/nguyen-quang-huy/Github/Law-RAG/demo_chunk.json';
 
 interface ChatMessage {
   id: string;
@@ -77,30 +76,6 @@ function App() {
   const handleRefreshStatus = () => {
     fetchStatus(true);
     showToast('Đang cập nhật trạng thái hệ thống...', 'info');
-  };
-
-  // Ingest demo_chunk.json
-  const handleIngestDemo = async () => {
-    setIngesting(true);
-    showToast('Đang xử lý & phân mảnh demo_chunk.json...', 'info');
-    try {
-      const res = await fetch(`${API_URL}/ingest-file`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_path: DEMO_FILE_PATH }),
-      });
-      if (res.status === 201) {
-        showToast('Nạp dữ liệu demo thành công!', 'success');
-        fetchStatus();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        showToast(`Lỗi: ${errorData.detail || 'Không rõ'}`, 'error');
-      }
-    } catch (err) {
-      showToast('Đã xảy ra lỗi khi kết nối tới máy chủ.', 'error');
-    } finally {
-      setIngesting(false);
-    }
   };
 
   // Ingest custom JSON file contents
@@ -227,7 +202,6 @@ function App() {
         dbStatus={dbStatus}
         loadingStatus={loadingStatus}
         onRefreshStatus={handleRefreshStatus}
-        onIngestDemo={handleIngestDemo}
         onIngestCustom={handleIngestCustom}
         ingesting={ingesting}
         onResetChat={handleResetChat}

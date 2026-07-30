@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileJson, X, RefreshCw, MessageSquare, Trash2 } from 'lucide-react';
+import { Upload, FileJson, X, RefreshCw, Trash2 } from 'lucide-react';
 
 export interface DBStatus {
   database_initialized: boolean;
@@ -11,7 +11,6 @@ interface SidebarProps {
   dbStatus: DBStatus | null;
   loadingStatus: boolean;
   onRefreshStatus: () => void;
-  onIngestDemo: () => Promise<void>;
   onIngestCustom: (chunks: any[]) => Promise<void>;
   ingesting: boolean;
   onResetChat: () => void;
@@ -22,7 +21,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   dbStatus,
   loadingStatus,
   onRefreshStatus,
-  onIngestDemo,
   onIngestCustom,
   ingesting,
   onResetChat,
@@ -142,22 +140,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <p className="sidebar-desc">
           Chuyển đổi và lập chỉ mục các văn bản pháp luật dưới dạng Vector và Từ khóa (Hybrid Index).
         </p>
-
-        {/* Demo Chunk */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '2px' }}>
-            Nạp dữ liệu
-          </p>
-          <button 
-            className="btn-gold-outline" 
-            onClick={onIngestDemo}
-            disabled={ingesting || dbStatus === null}
-          >
-            {ingesting ? 'Đang xử lý...' : 'Ingestion'}
-          </button>
-        </div>
-
-        <hr style={{ borderColor: 'rgba(255, 255, 255, 0.1)', margin: '0.75rem 0' }} />
 
         {/* Custom JSON Upload */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

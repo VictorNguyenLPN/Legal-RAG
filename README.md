@@ -105,6 +105,55 @@ cd frontend && npm run dev
 ```
 > Giao diện Web UI sẽ tự động mở tại: http://localhost:5173/
 
+### 5. Cấu trúc Dữ liệu Đầu vào & Nạp tài liệu (Ingestion)
+
+Để nạp tài liệu pháp luật của riêng bạn vào hệ thống, hãy chuẩn bị một tệp tin định dạng `.json` chứa danh sách các phân mảnh (chunks).
+
+#### Định dạng JSON Schema của dữ liệu đầu vào:
+Tệp tin JSON phải là một mảng các đối tượng (array of objects), mỗi đối tượng đại diện cho một phân mảnh văn bản pháp lý với cấu trúc mẫu như sau:
+
+```json
+[
+  {
+    "text": "Người nào thực hiện hành vi cướp tài sản của người khác bằng cách dùng vũ lực, đe dọa dùng vũ lực ngay tức khắc hoặc có hành vi khác làm cho người bị tấn công lâm vào tình trạng không thể chống cự được nhằm chiếm đoạt tài sản, thì bị phạt tù từ 03 năm đến 10 năm.",
+    "metadata": {
+      "document_title": "Bộ luật Hình sự số 100/2015/QH13",
+      "hierarchy_path": ["Chương XIV", "Mục 1", "Điều 168"],
+      "article_title": "Tội cướp tài sản",
+      "article_number": 168,
+      "clause_number": 1,
+      "point": null
+    }
+  },
+  {
+    "text": "Chuẩn bị phạm tội này, thì bị phạt tù từ 01 năm đến 05 năm.",
+    "metadata": {
+      "document_title": "Bộ luật Hình sự số 100/2015/QH13",
+      "hierarchy_path": ["Chương XIV", "Mục 1", "Điều 168"],
+      "article_title": "Tội cướp tài sản",
+      "article_number": 168,
+      "clause_number": 6,
+      "point": null
+    }
+  }
+]
+```
+
+#### Chi tiết các trường dữ liệu:
+* `text` (String - Bắt buộc): Nội dung phân mảnh văn bản pháp luật cần lập chỉ mục.
+* `metadata` (Object - Bắt buộc): Siêu dữ liệu hỗ trợ việc trích dẫn nguồn và hiển thị:
+  * `document_title` (String - Bắt buộc): Tên văn bản pháp luật (Ví dụ: tên Bộ luật, Luật, Quyết định...).
+  * `hierarchy_path` (Array of Strings - Tùy chọn): Đường dẫn phân cấp (Ví dụ: `["Chương XIV", "Điều 168"]`).
+  * `article_title` (String - Tùy chọn): Tiêu đề của Điều luật (Ví dụ: `Tội cướp tài sản`).
+  * `article_number` (Integer/String - Tùy chọn): Số hiệu của Điều (Ví dụ: `168`).
+  * `clause_number` (Integer/String - Tùy chọn): Số thứ tự của Khoản (Ví dụ: `1`).
+  * `point` (String - Tùy chọn): Điểm trong điều khoản (Ví dụ: `a`, `b`...).
+
+#### Cách nạp dữ liệu:
+1. Mở giao diện ứng dụng tại [http://localhost:5173/](http://localhost:5173/).
+2. Nhìn vào thanh quản lý bên trái (Sidebar), tại phần **"Nạp Tài Liệu Pháp Lý"**, nhấn vào vùng tải lên tệp tin.
+3. Chọn tệp tin JSON của bạn. Sau khi hệ thống đọc và xác thực thành công số lượng chunks, nhấn nút **"Lập chỉ mục tệp này"** để tiến hành nhúng vector và tạo chỉ mục từ khóa (Hybrid Search).
+
 ---
 
 ## Lịch sử phiên bản
