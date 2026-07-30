@@ -1,6 +1,6 @@
 # Legal RAG
 
->[!NOTE] Phiên bản hiện tại: v1.0.0 (MVP version với Corpus nhỏ)
+>[!NOTE] Phiên bản hiện tại: v2.2.0 (30/07/2026)
 
 Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toàn bằng Python, sử dụng BM25 kết hợp với Google Gemini Embedding để tìm kiếm và trả lời câu hỏi bằng Google Gemini 2.5 Flash Lite.
 
@@ -193,3 +193,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.0.0 (30/07/2026): Xử lý logic khi LLM không tìm thấy thông tin, chỉnh sửa giao diện, update conversation message, sửa prompt cho hội thoại cá nhân, ảnh demo
 
 - v2.1.0 (30/07/2026): Update demo corpus
+
+- v2.2.0 (30/07/2026): Check db mỗi lần khởi động, auto ingest nếu có corpus nhưng chưa có db

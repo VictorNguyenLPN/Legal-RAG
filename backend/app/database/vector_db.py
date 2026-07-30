@@ -6,7 +6,7 @@ from backend.app.config import settings
 
 class VectorDB:
     def __init__(self):
-        self.chunks_path = settings.DB_DIR / "chunks.json"
+        self.chunks_path = settings.DB_DIR / "corpus.json"
         self.embeddings_path = settings.DB_DIR / "embeddings.npy"
         
         self.chunks: List[Dict] = []

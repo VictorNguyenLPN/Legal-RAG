@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-section">
         <div className="sidebar-header">Nạp Tài Liệu Pháp Lý</div>
         <p className="sidebar-desc">
-          Chuyển đổi và lập chỉ mục các văn bản pháp luật dưới dạng Vector và Từ khóa (Hybrid Index).
+          Chuyển đổi và lập chỉ mục các văn bản pháp luật dưới dạng Vector và Từ khóa.
         </p>
 
         {/* Custom JSON Upload */}
