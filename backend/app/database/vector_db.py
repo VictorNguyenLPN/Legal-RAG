@@ -107,6 +107,16 @@ class VectorDB:
             logger.error(f"Error checking if ChromaDB is empty: {e}")
             return True
 
+    def __len__(self) -> int:
+        """
+        Returns the number of documents/chunks in the collection.
+        """
+        try:
+            return self.collection.count()
+        except Exception as e:
+            logger.error(f"Error getting collection count: {e}")
+            return 0
+
     def search(self, query_vector: List[float], top_k: int) -> List[Tuple[Dict, float]]:
         """
         Queries ChromaDB directly using the query vector.

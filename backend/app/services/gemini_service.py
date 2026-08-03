@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple, Any
 from google import genai
 # pyrefly: ignore [missing-import]
 from google.genai import types
@@ -88,9 +88,9 @@ class GeminiService:
             
         return embeddings
 
-    def generate_answer(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    def generate_answer(self, prompt: str, system_instruction: Optional[str] = None) -> Tuple[str, Optional[types.UsageMetadata]]:
         """
-        Generates answer using Gemini 2.5 Flash.
+        Generates answer using Gemini 2.5 Flash and returns the text response and token usage metadata.
         """
         if not self.client:
             raise ValueError("Gemini API Client is not initialized. Please configure GEMINI_API_KEY.")
@@ -107,7 +107,10 @@ class GeminiService:
                 contents=prompt,
                 config=config,
             )
-            return response.text
+
+            # print(response)
+            usage_metadata = getattr(response, "usage_metadata", None)
+            return response.text, usage_metadata
         except APIError as e:
             logger.error(f"Error generating answer from Gemini API: {e}")
             raise e

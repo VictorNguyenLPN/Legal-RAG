@@ -112,29 +112,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="sidebar">
       {/* System Status Section */}
       <div className="sidebar-section">
-        <div 
-          className="sidebar-header" 
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-        >
+        <div className="sidebar-header flex-header">
           <span>Trạng Thái Hệ Thống</span>
           <button 
             onClick={onRefreshStatus} 
             disabled={loadingStatus}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: 'var(--color-gold)', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center' 
-            }}
+            className="btn-refresh"
             title="Làm mới trạng thái"
           >
             <RefreshCw 
               size={14} 
-              style={{ 
-                animation: loadingStatus ? 'spin 1s linear infinite' : 'none' 
-              }} 
+              className={`spin-icon ${loadingStatus ? 'loading' : ''}`} 
             />
           </button>
         </div>
@@ -159,8 +147,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </p>
 
         {/* Custom JSON Upload */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '2px' }}>
+        <div className="sidebar-upload-container">
+          <p className="sidebar-upload-label">
             Tải lên tập tin mới
           </p>
           
@@ -169,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             accept=".json" 
             ref={fileInputRef} 
             onChange={handleFileChange} 
-            style={{ display: 'none' }}
+            className="hidden-input"
           />
 
           {!selectedFile ? (
@@ -181,23 +169,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <div className="file-selected-box">
               <div className="file-selected-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '85%' }}>
-                  <FileJson size={18} style={{ color: 'var(--color-gold)', flexShrink: 0 }} />
+                <div className="file-selected-left">
+                  <FileJson size={18} className="file-json-icon" />
                   <span className="file-name" title={selectedFile.name}>{selectedFile.name}</span>
                 </div>
                 <button className="btn-remove-file" onClick={handleRemoveFile}>
                   <X size={16} />
                 </button>
               </div>
-              <div className="file-upload-subtext" style={{ paddingLeft: '24px' }}>
+              <div className="file-upload-subtext file-selected-subtext">
                 {parsedChunks ? `${parsedChunks.length} chunks sẵn sàng` : 'Đang tải...'}
               </div>
               {parsedChunks && (
                 <button 
-                  className="btn-gold-outline" 
+                  className="btn-gold-outline btn-ingest-file" 
                   onClick={handleIngestCustomClick}
                   disabled={ingesting}
-                  style={{ marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.75rem' }}
                 >
                   {ingesting ? 'Đang lập chỉ mục...' : 'Lập chỉ mục tệp này'}
                 </button>
@@ -214,50 +201,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Conversation Section */}
-      <div className="sidebar-section" style={{ marginTop: 'auto' }}>
-        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* <MessageSquare size={18} style={{ color: 'var(--color-gold)' }} /> */}
+      <div className="sidebar-section bottom">
+        <div className="sidebar-header flex-header-center">
           <span>Hội Thoại</span>
         </div>
         <p className="sidebar-desc">
           Lịch sử chat được lưu trữ tạm thời trong phiên làm việc hiện tại.
         </p>
         <button 
-          className="btn-gold-outline" 
+          className={`btn-gold-outline btn-reset-chat ${chatLength > 0 ? 'active' : ''}`} 
           onClick={onResetChat}
           disabled={chatLength === 0}
-          style={{ 
-            marginTop: '0.5rem', 
-            borderColor: chatLength > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(197, 168, 128, 0.2)',
-            color: chatLength > 0 ? '#FCA5A5' : 'var(--color-text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
         >
           <Trash2 size={16} />
           <span>Xóa lịch sử chat</span>
         </button>
       </div>
-      
-      {/* CSS Animation Keyframes for Refresh and Ingesting */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0% { opacity: 0.4; }
-          50% { opacity: 1; }
-          100% { opacity: 0.4; }
-        }
-        .status-dot.ingesting {
-          background-color: var(--color-gold);
-          box-shadow: 0 0 8px var(--color-gold);
-          animation: pulse 1.5s infinite ease-in-out;
-        }
-      `}</style>
     </div>
   );
 };

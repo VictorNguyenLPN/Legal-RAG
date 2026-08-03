@@ -62,7 +62,7 @@ class SparseSearch:
             top_k = settings.SPARSE_TOP_K
 
         # Auto-rebuild BM25 if VectorDB chunks changed (e.g. after calling /ingest)
-        if self.bm25 is None or len(self.chunks) != len(vector_db.chunks):
+        if self.bm25 is None or len(self.chunks) != len(vector_db):
             self.initialize()
 
         if self.bm25 is None:

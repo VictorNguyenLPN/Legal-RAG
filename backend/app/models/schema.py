@@ -52,6 +52,10 @@ class Source(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: List[Source]
+    prompt_tokens: Optional[int] = None
+    response_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    response_time: Optional[float] = None
 
 class IngestResponse(BaseModel):
     status: str

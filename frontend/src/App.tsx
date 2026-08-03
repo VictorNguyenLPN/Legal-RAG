@@ -14,6 +14,10 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  promptTokens?: number;
+  responseTokens?: number;
+  totalTokens?: number;
+  responseTime?: number;
 }
 
 interface Toast {
@@ -150,7 +154,11 @@ function App() {
           id: assistantMsgId,
           role: 'assistant',
           content: data.answer || 'Không tìm thấy câu trả lời phù hợp.',
-          sources: data.sources || []
+          sources: data.sources || [],
+          promptTokens: data.prompt_tokens,
+          responseTokens: data.response_tokens,
+          totalTokens: data.total_tokens,
+          responseTime: data.response_time
         };
         setMessages((prev) => [...prev, newAssistantMsg]);
       } else {
@@ -209,24 +217,50 @@ function App() {
       />
 
       {/* Main Panel */}
-      <div className="main-panel" style={{ display: 'flex', flexDirection: 'column', height: '100vh'}}>
+      <div className="main-panel">
         {messages.length === 0 && <Header />}
 
         {/* Chat / Content Area */}
-        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: 0}}>
+        <div className="chat-area-wrapper">
 
           {messages.length === 0 ? (
             <></>
           ) : (
-            <div className="chat-history-container" style={{ maxHeight: 'none', flexGrow: 1, border: 'none', background: 'transparent'}}>
+            <div className="chat-history-container">
               {messages.map((msg) => (
                 <div key={msg.id} className={`chat-message-item ${msg.role}`}>
                   <div className={`chat-bubble ${msg.role}`}>
                     {msg.role === 'user' ? (
                       <div>{msg.content}</div>
                     ) : (
-                      <div className="legal-opinion-text" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', lineHeight: '1.7' }}>
+                      <div className="legal-opinion-text legal-opinion-chat-text">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
+
+                        {/* Token usage and response time metadata */}
+                        {(msg.responseTime !== undefined || msg.promptTokens !== undefined || msg.responseTokens !== undefined) && (
+                          <div className="chat-metadata-bar">
+                            {msg.responseTime !== undefined && (
+                              <span className="chat-metadata-item time">
+                                {msg.responseTime}s
+                              </span>
+                            )}
+                            {msg.promptTokens !== undefined && (
+                              <span className="chat-metadata-item">
+                                Prompt: {msg.promptTokens} tokens
+                              </span>
+                            )}
+                            {msg.responseTokens !== undefined && (
+                              <span className="chat-metadata-item">
+                                Response: {msg.responseTokens} tokens
+                              </span>
+                            )}
+                            {msg.totalTokens !== undefined && (
+                              <span className="chat-metadata-item total">
+                                Total: {msg.totalTokens} tokens
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {msg.sources && msg.sources.length > 0 && (
                           <div className="chat-sources-wrapper">
@@ -241,9 +275,9 @@ function App() {
 
               {loadingSearch && (
                 <div className="chat-message-item assistant">
-                  <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: '12px', width: 'auto' }}>
-                    <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px', margin: 0 }}></div>
-                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
+                  <div className="chat-bubble assistant chat-bubble-thinking">
+                    <div className="spinner spinner-small"></div>
+                    <span className="thinking-text">
                       Đang suy nghĩ ...
                     </span>
                   </div>

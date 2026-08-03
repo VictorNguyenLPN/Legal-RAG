@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 from typing import List
 from fastapi import APIRouter, HTTPException, status
@@ -76,13 +77,22 @@ def query_rag(payload: QueryRequest):
         )
         
     try:
+        start_time = time.perf_counter()
         history_list = None
         if payload.history:
             history_list = [{"role": msg.role, "content": msg.content} for msg in payload.history]
         result = rag_service.query(payload.query, history_list)
+        end_time = time.perf_counter()
+        
+        response_time = round(end_time - start_time, 2)
+        
         return QueryResponse(
             answer=result["answer"],
-            sources=result["sources"]
+            sources=result["sources"],
+            prompt_tokens=result.get("prompt_tokens"),
+            response_tokens=result.get("response_tokens"),
+            total_tokens=result.get("total_tokens"),
+            response_time=response_time
         )
     except Exception as e:
         raise HTTPException(

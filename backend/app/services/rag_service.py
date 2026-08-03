@@ -72,9 +72,10 @@ class RAGService:
         logger.info(f"Successfully saved {len(chunks)} chunks & embeddings.")
         return len(chunks)
 
-    def condense_query(self, user_query: str, history: List[Dict[str, str]]) -> str:
+    def condense_query(self, user_query: str, history: List[Dict[str, str]]) -> Tuple[str, Any]:
         """
         Condenses a user's follow-up query with the conversation history into a standalone query.
+        Returns a tuple of (condensed_query, usage_metadata).
         """
         history_str = ""
         for msg in history:
@@ -92,14 +93,14 @@ class RAGService:
             "Câu hỏi độc lập:"
         )
         try:
-            condensed = gemini_service.generate_answer(prompt=prompt)
+            condensed, usage_metadata = gemini_service.generate_answer(prompt=prompt)
             condensed_clean = condensed.strip()
             if condensed_clean:
                 logger.info(f"Condensed query: '{user_query}' -> '{condensed_clean}'")
-                return condensed_clean
+                return condensed_clean, usage_metadata
         except Exception as e:
             logger.error(f"Error in query condensation: {e}")
-        return user_query
+        return user_query, None
 
     def query(self, user_query: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
@@ -111,10 +112,18 @@ class RAGService:
                 "sources": []
             }
 
+        prompt_tokens = 0
+        response_tokens = 0
+        total_tokens = 0
+
         # 0. Condense query if chat history exists
         search_query = user_query
         if history:
-            search_query = self.condense_query(user_query, history)
+            search_query, condense_metadata = self.condense_query(user_query, history)
+            if condense_metadata:
+                prompt_tokens += condense_metadata.prompt_token_count or 0
+                response_tokens += condense_metadata.candidates_token_count or 0
+                total_tokens += condense_metadata.total_token_count or 0
 
         # 1. Dense Search
         query_vector = gemini_service.get_embedding(search_query)
@@ -190,10 +199,14 @@ class RAGService:
         )
 
         # 7. Generate answer using Gemini 2.5 Flash
-        answer = gemini_service.generate_answer(
+        answer, answer_metadata = gemini_service.generate_answer(
             prompt=prompt,
             system_instruction=self.SYSTEM_INSTRUCTION
         )
+        if answer_metadata:
+            prompt_tokens += answer_metadata.prompt_token_count or 0
+            response_tokens += answer_metadata.candidates_token_count or 0
+            total_tokens += answer_metadata.total_token_count or 0
 
         print(answer)
 
@@ -225,7 +238,10 @@ class RAGService:
 
         return {
             "answer": answer,
-            "sources": sources
+            "sources": sources,
+            "prompt_tokens": prompt_tokens if prompt_tokens > 0 else None,
+            "response_tokens": response_tokens if response_tokens > 0 else None,
+            "total_tokens": total_tokens if total_tokens > 0 else None,
         }
 
 # Singleton instance of RAGService

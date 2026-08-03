@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 # pyrefly: ignore [missing-import]
 import uvicorn
 # pyrefly: ignore [missing-import]
@@ -15,26 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    description="Legal Document QA MVP using Hybrid Search and Google Gemini",
-    version="1.0.0"
-)
-
-# Enable CORS for frontend compatibility
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include API routes directly at the root (matching /ingest and /query)
-app.include_router(router)
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     import json
     from backend.app.database.vector_db import vector_db
     from backend.app.services.rag_service import rag_service
@@ -61,6 +44,26 @@ async def startup_event():
             logger.info("ChromaDB already initialized. Skipping auto-ingestion.")
     else:
         logger.info("corpus.json not found in data directory. System is ready for manual upload/ingestion.")
+    yield
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="Legal Document QA MVP using Hybrid Search and Google Gemini",
+    version="2.3.2",
+    lifespan=lifespan
+)
+
+# Enable CORS for frontend compatibility
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API routes directly at the root (matching /ingest and /query)
+app.include_router(router)
 
 
 @app.get("/")
