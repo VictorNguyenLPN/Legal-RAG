@@ -254,18 +254,18 @@ body {
 /* Main Panel Styles */
 .main-panel {
   flex-grow: 1;
-  padding: 3rem 4rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  /* padding: 3rem 4rem; */
+  /* max-width: 1200px; */
+  /* margin: 0 auto; */
   width: 100%;
   /* height: 100% */
 }
 
-@media (max-width: 992px) {
+/* @media (max-width: 992px) {
   .main-panel {
     padding: 2rem 1.5rem;
   }
-}
+} */
 
 /* Legal Header */
 .legal-header {
@@ -333,7 +333,8 @@ body {
 
 /* Search Area */
 .search-container {
-  margin-bottom: 1rem;
+  margin-bottom: 10px;
+  padding: 2rem 20rem;
 }
 
 .search-label {
@@ -349,7 +350,7 @@ body {
   gap: 0.75rem;
   box-shadow: 0 4px 20px -5px rgba(15, 30, 54, 0.05);
   border-radius: 8px;
-  background-color: var(--color-bg-card);
+  /* background-color: var(--color-bg-card); */
 }
 
 .search-input-wrapper {
@@ -378,8 +379,8 @@ body {
 }
 
 .search-input::placeholder {
-  color: #94A3B8; 
-  opacity: 1;
+  color: #94A3B8;
+  opacity: 40%;
 }
 
 .search-icon {
@@ -448,7 +449,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tip Box & Empty State */
@@ -591,9 +594,17 @@ body {
   font-weight: 700;
 }
 
-.legal-opinion-text h1 { font-size: 1.5rem; }
-.legal-opinion-text h2 { font-size: 1.35rem; }
-.legal-opinion-text h3 { font-size: 1.2rem; }
+.legal-opinion-text h1 {
+  font-size: 1.5rem;
+}
+
+.legal-opinion-text h2 {
+  font-size: 1.35rem;
+}
+
+.legal-opinion-text h3 {
+  font-size: 1.2rem;
+}
 
 /* Citations & Badge Styling */
 .citations-container {
@@ -753,7 +764,8 @@ body {
 }
 
 .accordion-item.expanded .accordion-content {
-  max-height: 1000px; /* arbitrary height limit for transition */
+  max-height: 1000px;
+  /* arbitrary height limit for transition */
 }
 
 /* Chunk Card Inside Accordion */
@@ -811,36 +823,48 @@ body {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(50px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Chat Conversational Interface */
 .chat-history-container {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   max-height: 60vh;
-  overflow-y: auto;
-  padding: 1rem;
+  /* overflow-y: auto; */
+  padding: 4rem 20rem;
   border-radius: 12px;
   background-color: rgba(15, 30, 54, 0.01);
-  border: 1px solid rgba(15, 30, 54, 0.03);
+  /* border: 1px solid rgba(15, 30, 54, 0.03); */
   scroll-behavior: smooth;
+  /* padding: 1000px; */
 }
 
 /* Custom scrollbar for chat history */
 .chat-history-container::-webkit-scrollbar {
   width: 6px;
 }
+
 .chat-history-container::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .chat-history-container::-webkit-scrollbar-thumb {
   background-color: rgba(197, 168, 128, 0.3);
   border-radius: 3px;
 }
+
 .chat-history-container::-webkit-scrollbar-thumb:hover {
   background-color: rgba(197, 168, 128, 0.5);
 }
@@ -883,16 +907,10 @@ body {
 }
 
 .chat-bubble {
-  max-width: 85%;
-  padding: 10px 15px 10px 15px;
+  max-width: 100%;
+  /* padding: 10px 15px 10px 15px; */
   box-shadow: var(--shadow-premium);
   position: relative;
-}
-
-@media (max-width: 768px) {
-  .chat-bubble {
-    max-width: 95%;
-  }
 }
 
 .chat-bubble.user {
@@ -901,14 +919,16 @@ body {
   border-radius: 16px 16px 4px 16px;
   border: 1px solid rgba(197, 168, 128, 0.15);
   font-size: 1rem;
+  padding: 10px 20px;
 }
 
 .chat-bubble.assistant {
-  background-color: var(--color-bg-card);
+  /* background-color: var(--color-bg-card); */
   color: var(--color-text-primary);
-  border-radius: 16px 16px 16px 4px;
-  border: 1px solid var(--color-border);
-  width: 100%;
+  /* border-radius: 16px 16px 16px 4px; */
+  /* border: 1px solid var(--color-border); */
+  box-shadow: none;
+  /* width: 100%; */
 }
 
 .chat-sources-wrapper {

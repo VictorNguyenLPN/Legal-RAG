@@ -48,20 +48,9 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           className="btn-search"
           disabled={!query.trim() || loading || disabled}
         >
-          {loading ? 'Đang trả lời...' : 'Gửi câu hỏi'}
+          {loading ? 'Đang trả lời...' : 'Gửi'}
         </button>
       </form>
-      <p 
-        style={{ 
-          fontSize: '0.8rem', 
-          color: 'var(--color-text-muted)', 
-          marginTop: '0.5rem', 
-          fontStyle: 'italic',
-          paddingLeft: '4px' 
-        }}
-      >
-        Nhập tình huống thực tế, điều khoản, luật hoặc thắc mắc về pháp lý.
-      </p>
     </div>
   );
 };

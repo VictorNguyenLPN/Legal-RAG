@@ -158,7 +158,7 @@ function App() {
         const newErrorMsg: ChatMessage = {
           id: assistantMsgId,
           role: 'assistant',
-          content: `⚠️ **Lỗi hệ thống:** ${errorData.detail || 'Phản hồi thất bại từ máy chủ.'}`
+          content: `**Lỗi hệ thống:** ${errorData.detail || 'Phản hồi thất bại từ máy chủ.'}`
         };
         setMessages((prev) => [...prev, newErrorMsg]);
       }
@@ -171,7 +171,7 @@ function App() {
       const newErrorMsg: ChatMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: `⚠️ **Lỗi kết nối:** ${message}`
+        content: `**Lỗi kết nối:** ${message}`
       };
       setMessages((prev) => [...prev, newErrorMsg]);
       showToast(message, 'error');
@@ -209,22 +209,18 @@ function App() {
       />
 
       {/* Main Panel */}
-      <div className="main-panel" style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '2rem 3rem' }}>
+      <div className="main-panel" style={{ display: 'flex', flexDirection: 'column', height: '100vh'}}>
         {messages.length === 0 && <Header />}
 
         {/* Chat / Content Area */}
-        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: 0, paddingRight: '4px' }}>
+        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: 0}}>
 
           {messages.length === 0 ? (
             <></>
           ) : (
-            <div className="chat-history-container" style={{ maxHeight: 'none', flexGrow: 1, border: 'none', background: 'transparent', padding: 0 }}>
+            <div className="chat-history-container" style={{ maxHeight: 'none', flexGrow: 1, border: 'none', background: 'transparent'}}>
               {messages.map((msg) => (
                 <div key={msg.id} className={`chat-message-item ${msg.role}`}>
-                  <span className="chat-sender-label">
-                    {msg.role === 'user' ? 'Bạn' : 'Trợ lý AI'}
-                  </span>
-
                   <div className={`chat-bubble ${msg.role}`}>
                     {msg.role === 'user' ? (
                       <div>{msg.content}</div>
@@ -245,8 +241,7 @@ function App() {
 
               {loadingSearch && (
                 <div className="chat-message-item assistant">
-                  <span className="chat-sender-label">Trợ lý AI</span>
-                  <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '1rem 1.5rem', width: 'auto' }}>
+                  <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: '12px', width: 'auto' }}>
                     <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px', margin: 0 }}></div>
                     <span style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
                       Đang suy nghĩ ...

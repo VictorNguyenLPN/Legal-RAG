@@ -197,3 +197,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.2.0 (30/07/2026): Check db mỗi lần khởi động, auto ingest nếu có corpus nhưng chưa có db
 
 - v2.3.0 (03/08/2026): Tích hợp ChromaDB làm Vector DB (hỗ trợ Persistent & Server HTTP mode), cập nhật giao diện hiển thị trạng thái chi tiết của Backend & Database, sửa lỗi khóa luồng (thread blocking) khi nạp lại dữ liệu (ingestion).
+
+- v2.3.1 (03/08/2026): Chỉnh sửa giao diện

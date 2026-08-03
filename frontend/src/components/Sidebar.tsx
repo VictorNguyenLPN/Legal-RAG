@@ -153,9 +153,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Ingest Section */}
       <div className="sidebar-section">
-        <div className="sidebar-header">Nạp Tài Liệu Pháp Lý</div>
+        <div className="sidebar-header">Nhập Tài Liệu Pháp Lý</div>
         <p className="sidebar-desc">
-          Chuyển đổi và lập chỉ mục các văn bản pháp luật dưới dạng Vector và Từ khóa.
+          Embedding tài liệu pháp lý thành Vector và lưu vào ChromaDB.
         </p>
 
         {/* Custom JSON Upload */}
@@ -175,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!selectedFile ? (
             <div className="file-upload-dropzone" onClick={() => fileInputRef.current?.click()}>
               <Upload className="file-upload-icon" />
-              <div className="file-upload-text">Chọn tệp cấu trúc JSON</div>
+              <div className="file-upload-text">Chọn tệp JSON</div>
               <div className="file-upload-subtext">Nhấn vào đây để tải lên</div>
             </div>
           ) : (
