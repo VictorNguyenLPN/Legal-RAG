@@ -1,4 +1,26 @@
-# Legal RAG
+<p align="center">
+  <img src="images/logo.png" alt="Logo" height="200" />
+</p>
+
+<h1 align="center">Legal RAG</h1>
+
+<p align="center">
+  <a href="https://github.com/VictorNguyenLPN/Legal-RAG/stargazers">
+    <img src="https://img.shields.io/github/stars/VictorNguyenLPN/Legal-RAG?style=for-the-badge&logo=github&color=33a8ff" alt="Stars" />
+  </a>
+  <a href="https://github.com/VictorNguyenLPN/Legal-RAG/network/members">
+    <img src="https://img.shields.io/github/forks/VictorNguyenLPN/Legal-RAG?style=for-the-badge&logo=github&color=33a8ff" alt="Forks" />
+  </a>
+  <a href="https://github.com/VictorNguyenLPN/Legal-RAG/issues">
+    <img src="https://img.shields.io/github/issues/VictorNguyenLPN/Legal-RAG?style=for-the-badge&logo=github&color=ea4335" alt="Issues" />
+  </a>
+</p>
+
+<p align="center">
+  <strong>Hệ thống Hỏi Đáp Văn Bản Pháp Luật (RAG) sử dụng Hybrid Search & Gemini</strong>
+</p>
+
+---
 
 >[!NOTE] Phiên bản hiện tại: v2.3.2 (03/08/2026)
 
