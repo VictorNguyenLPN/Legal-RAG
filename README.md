@@ -20,6 +20,10 @@
   <strong>Hệ thống Hỏi Đáp Văn Bản Pháp Luật (RAG) sử dụng Hybrid Search & Gemini</strong>
 </p>
 
+<p align="center">
+  <a href="README_EN.md">English</a> | <a href="README.md">Tiếng Việt</a> | <a href="README_ZH.md">简体中文</a>
+</p>
+
 ---
 
 >[!NOTE] Phiên bản hiện tại: v2.3.2 (03/08/2026)
