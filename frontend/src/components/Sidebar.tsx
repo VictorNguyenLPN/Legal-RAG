@@ -31,6 +31,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getBackendStatus = () => {
+    if (dbStatus !== null) {
+      return { dotClass: 'active', text: 'OK' };
+    }
+    if (ingesting) {
+      return { dotClass: 'ingesting', text: 'Đang xử lý...' };
+    }
+    return { dotClass: 'inactive', text: 'Disconnected' };
+  };
+
+  const getDbStatusInfo = () => {
+    if (ingesting) {
+      return { dotClass: 'ingesting', text: 'Đang nạp dữ liệu...' };
+    }
+    if (dbStatus !== null) {
+      if (dbStatus.database_initialized) {
+        return { dotClass: 'active', text: `${dbStatus.chunk_count} Chunks` };
+      }
+      return { dotClass: 'inactive', text: 'No Data' };
+    }
+    return { dotClass: 'inactive', text: 'Disconnected' };
+  };
+
+  const backendStatus = getBackendStatus();
+  const dbStatusInfo = getDbStatusInfo();
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMsg(null);
     const files = e.target.files;
@@ -113,25 +139,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {dbStatus === null ? (
-          <div className="status-box">
-            <div className="status-line">
-              <span className="status-dot inactive"></span>
-              <span>Backend: Disconnect</span>
-            </div>
+        <div className="status-box">
+          <div className="status-line">
+            <span className={`status-dot ${backendStatus.dotClass}`}></span>
+            <span>Backend: {backendStatus.text}</span>
           </div>
-        ) : (
-          <div className="status-box">
-            <div className="status-line">
-              <span className="status-dot active"></span>
-              <span>API: Hoạt động (OK)</span>
-            </div>
-            <div className="status-line">
-              <span className={`status-dot ${dbStatus.database_initialized ? 'active' : 'inactive'}`}></span>
-              <span>Corpus: {dbStatus.database_initialized ? `${dbStatus.chunk_count} Chunks` : 'Chưa có dữ liệu'}</span>
-            </div>
+          <div className="status-line">
+            <span className={`status-dot ${dbStatusInfo.dotClass}`}></span>
+            <span>Database: {dbStatusInfo.text}</span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Ingest Section */}
@@ -224,11 +241,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
       
-      {/* CSS Animation Keyframes for Refresh button */}
+      {/* CSS Animation Keyframes for Refresh and Ingesting */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0% { opacity: 0.4; }
+          50% { opacity: 1; }
+          100% { opacity: 0.4; }
+        }
+        .status-dot.ingesting {
+          background-color: var(--color-gold);
+          box-shadow: 0 0 8px var(--color-gold);
+          animation: pulse 1.5s infinite ease-in-out;
         }
       `}</style>
     </div>

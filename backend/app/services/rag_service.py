@@ -52,7 +52,7 @@ class RAGService:
             return 0
         
         # Limit to 100 chunks for demo purposes
-        # chunks = chunks[:1000]
+        chunks = chunks[:100]
         
         logger.info(f"Ingesting {len(chunks)} chunks...")
         

@@ -1,6 +1,6 @@
 # Legal RAG
 
->[!NOTE] Phiên bản hiện tại: v2.2.0 (30/07/2026)
+>[!NOTE] Phiên bản hiện tại: v2.3.0 (03/08/2026)
 
 Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toàn bằng Python, sử dụng BM25 kết hợp với Google Gemini Embedding để tìm kiếm và trả lời câu hỏi bằng Google Gemini 2.5 Flash Lite.
 
@@ -12,7 +12,7 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toà
 
 - **Xếp hạng dung hợp RRF:** Kết hợp, tối ưu kết quả từ Dense và Sparse Search.
 
-- **Cơ sở dữ liệu Vector:** Cục bộ `.npy` và metadata trong file JSON.
+- **Cơ sở dữ liệu Vector:** Sử dụng ChromaDB (Hỗ trợ cả chế độ Persistent lưu trữ file cục bộ hoặc kết nối Docker Server qua HTTP Client).
 
 - **LLM**: `gemini-2.5-flash`.
 
@@ -43,11 +43,11 @@ Law-RAG/
 │       │   ├── gemini_service.py # Gọi API Gemini
 │       │   └── rag_service.py    # Điều phối luồng RAG pipeline
 │       ├── retrieval/
-│       │   ├── dense.py          # Tìm kiếm vector bằng Cosine Similarity
+│       │   ├── dense.py          # Tìm kiếm vector trực tiếp trên ChromaDB
 │       │   ├── sparse.py         # Tìm kiếm BM25 tiếng Việt
 │       │   └── fusion.py         # Thuật toán Reciprocal Rank Fusion (RRF)
 │       ├── database/
-│       │   └── vector_db.py      # Quản lý lưu trữ/đọc file .npy & json
+│       │   └── vector_db.py      # Quản lý kết nối và thao tác với ChromaDB
 │       ├── models/
 │       │   └── schema.py         # Pydantic models xác thực dữ liệu API
 │       ├── config.py             # Cấu hình biến môi trường & Siêu tham số
@@ -57,7 +57,7 @@ Law-RAG/
 │   └── ...                       # Các component khác
 ├── data/
 │   ├── input/                    # Thư mục chứa dữ liệu JSON đầu vào
-│   └── db/                       # Lưu trữ CSDL cục bộ (.npy và chunks.json)
+│   └── chroma/                   # Lưu trữ CSDL ChromaDB cục bộ (chế độ Persistent)
 ├── requirements.txt              # Thư viện phụ thuộc
 └── README.md                     # Hướng dẫn sử dụng
 ```
@@ -195,3 +195,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.1.0 (30/07/2026): Update demo corpus
 
 - v2.2.0 (30/07/2026): Check db mỗi lần khởi động, auto ingest nếu có corpus nhưng chưa có db
+
+- v2.3.0 (03/08/2026): Tích hợp ChromaDB làm Vector DB (hỗ trợ Persistent & Server HTTP mode), cập nhật giao diện hiển thị trạng thái chi tiết của Backend & Database, sửa lỗi khóa luồng (thread blocking) khi nạp lại dữ liệu (ingestion).

@@ -42,47 +42,50 @@ class GeminiService:
             logger.error(f"Error getting embedding from Gemini API: {e}")
             raise e
 
-    def get_embeddings_batch(self, texts: List[str], batch_size: int = 20) -> List[List[float]]:
+    def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """
-        Generates embeddings for a list of text strings in batches.
-        Includes rate limiting delay and exponential backoff retry to prevent TPM limit exhaustion.
+        Generates embeddings for a list of text strings using parallel single-item calls.
+        This avoids the BatchEmbedContents 401 authentication bug and 
+        the gemini-embedding-2 multi-part aggregation issue.
         """
+        from concurrent.futures import ThreadPoolExecutor
         import time
+
         if not self.client:
             raise ValueError("Gemini API Client is not initialized. Please configure GEMINI_API_KEY.")
-        
-        embeddings = []
-        total_batches = (len(texts) + batch_size - 1) // batch_size
-        
-        for idx, i in enumerate(range(0, len(texts), batch_size)):
-            batch = texts[i : i + batch_size]
+
+        def get_single_embedding_with_retry(text: str) -> List[float]:
             max_retries = 5
             backoff = 2.0
-            
-            # Simple rate limiting delay between batches
-            if idx > 0:
-                time.sleep(2.0)
-                
             for retry in range(max_retries):
                 try:
                     response = self.client.models.embed_content(
                         model=settings.EMBEDDING_MODEL,
-                        contents=batch,
+                        contents=text,
                     )
-                    for emb in response.embeddings:
-                        embeddings.append(emb.values)
-                    break  # Success, exit retry loop
+                    if response.embeddings:
+                        return response.embeddings[0].values
+                    elif hasattr(response, "embedding") and response.embedding:
+                        return response.embedding.values
+                    else:
+                        raise ValueError("No embedding returned in Gemini API response.")
                 except APIError as e:
-                    # 429 is usually RESOURCE_EXHAUSTED
-                    if getattr(e, "code", None) == 429 or "exhausted" in str(e).lower() or retry == max_retries - 1:
+                    # 429 is Rate Limit / Resource Exhausted
+                    if getattr(e, "code", None) == 429 or "exhausted" in str(e).lower():
                         if retry < max_retries - 1:
-                            logger.warning(f"Rate limit hit during batch embedding. Retrying in {backoff}s... (Retry {retry + 1}/{max_retries})")
+                            logger.warning(f"Rate limit hit. Retrying in {backoff}s... (Retry {retry + 1}/{max_retries})")
                             time.sleep(backoff)
                             backoff *= 2.0
                             continue
-                    logger.error(f"Error in batch embedding: {e}")
+                    logger.error(f"Error getting single embedding: {e}")
                     raise e
-                
+            raise ValueError("Failed to retrieve embedding after maximum retries.")
+
+        logger.info(f"Generating embeddings for {len(texts)} texts in parallel...")
+        # Using 10 workers to keep it fast but avoid overwhelming the rate limits
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            embeddings = list(executor.map(get_single_embedding_with_retry, texts))
+            
         return embeddings
 
     def generate_answer(self, prompt: str, system_instruction: Optional[str] = None) -> str:

@@ -11,7 +11,7 @@ from backend.app.database.vector_db import vector_db
 router = APIRouter()
 
 @router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
-async def ingest_from_body(chunks: List[Chunk]):
+def ingest_from_body(chunks: List[Chunk]):
     """
     Ingest a list of document chunks directly from the HTTP request body.
     """
@@ -31,7 +31,7 @@ async def ingest_from_body(chunks: List[Chunk]):
         )
 
 @router.post("/ingest-file", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
-async def ingest_from_file(payload: IngestFileRequest):
+def ingest_from_file(payload: IngestFileRequest):
     """
     Ingest document chunks from a local JSON file path on the server.
     """
@@ -65,7 +65,7 @@ async def ingest_from_file(payload: IngestFileRequest):
         )
 
 @router.post("/query", response_model=QueryResponse)
-async def query_rag(payload: QueryRequest):
+def query_rag(payload: QueryRequest):
     """
     Query the Hybrid Legal RAG pipeline.
     """

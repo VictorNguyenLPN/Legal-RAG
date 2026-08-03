@@ -8,7 +8,9 @@ export const Header: React.FC = () => {
       <div className="legal-header-divider"></div>
       <p className="legal-header-subtitle">
         Hệ thống tra cứu thông minh <br />
-        sử dụng mô hình Gemini 2.5 Flash kết hợp tìm kiếm ngữ nghĩa và từ khóa.
+        sử dụng mô hình Gemini 2.5 Flash kết hợp tìm kiếm ngữ nghĩa và từ khóa. <br/> <br/>
+
+        {/* <i>Phát triển bởi Nguyễn Quang Huy</i> */}
       </p>
     </div>
   );

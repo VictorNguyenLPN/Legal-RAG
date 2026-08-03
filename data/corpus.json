@@ -1,100 +1,51 @@
 [
-  {
-    "chunk_id": "law_7eef1c6f9712c9a77af24be877851ca1_a1",
-    "node_type": "article",
-    "metadata": {
-      "document_id": "7eef1c6f9712c9a77af24be877851ca1",
-      "document_type": "Bộ luật",
-      "document_title": "Bộ luật Hình sự số 15/1999/QH10",
-      "doc_identity": "15/1999/QH10",
-      "major_names": [
-        "Tư pháp"
-      ],
-      "field_names": [
-        "Chưa phân loại"
-      ],
-      "issue_date": "1999-12-21",
-      "effect_date": "2000-07-01",
-      "effect_status_name": "Hết hiệu lực toàn bộ",
-      "expire_date": "2018-01-01",
-      "organ_names": [
-        "Quốc hội"
-      ],
-      "signer_title_names": [
-        "Chủ tịch Quốc hội"
-      ],
-      "signer_names": [
-        "Nông Đức Mạnh"
-      ],
-      "vbpl_url": "https://vbpl.vn/van-ban/chi-tiet/bo-luat-hinh-su-so-15-1999-qh10--6157",
-      "source_guid": null,
-      "scraped_date": "2026-07-01T20:04:58.071402+07:00",
-      "part_number": null,
-      "part_title": null,
-      "chapter_number": "I",
-      "chapter_title": "ĐIỀU KHOẢN CƠ BẢN",
-      "section_number": null,
-      "section_title": null,
-      "article_number": 1,
-      "article_title": "Nhiệm vụ của Bộ luật hình sự",
-      "clause_number": null,
-      "clause_title": "Bộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội.",
-      "point": null,
-      "hierarchy_path": [
-        "7eef1c6f9712c9a77af24be877851ca1",
-        "Chương I",
-        "Điều 1"
-      ]
-    },
-    "text": "Nhiệm vụ của Bộ luật hình sự\nBộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội."
-  },
-  {
-    "chunk_id": "law_7eef1c6f9712c9a77af24be877851ca1_a2",
-    "node_type": "article",
-    "metadata": {
-      "document_id": "7eef1c6f9712c9a77af24be877851ca1",
-      "document_type": "Bộ luật",
-      "document_title": "Bộ luật Hình sự số 15/1999/QH10",
-      "doc_identity": "15/1999/QH10",
-      "major_names": [
-        "Tư pháp"
-      ],
-      "field_names": [
-        "Chưa phân loại"
-      ],
-      "issue_date": "1999-12-21",
-      "effect_date": "2000-07-01",
-      "effect_status_name": "Hết hiệu lực toàn bộ",
-      "expire_date": "2018-01-01",
-      "organ_names": [
-        "Quốc hội"
-      ],
-      "signer_title_names": [
-        "Chủ tịch Quốc hội"
-      ],
-      "signer_names": [
-        "Nông Đức Mạnh"
-      ],
-      "vbpl_url": "https://vbpl.vn/van-ban/chi-tiet/bo-luat-hinh-su-so-15-1999-qh10--6157",
-      "source_guid": null,
-      "scraped_date": "2026-07-01T20:04:58.071402+07:00",
-      "part_number": null,
-      "part_title": null,
-      "chapter_number": "I",
-      "chapter_title": "ĐIỀU KHOẢN CƠ BẢN",
-      "section_number": null,
-      "section_title": null,
-      "article_number": 2,
-      "article_title": "Cơ sở của trách nhiệm hình sự",
-      "clause_number": null,
-      "clause_title": "Chỉ người nào phạm một tội đã được Bộ luật hình sự quy định mới phải chịu trách nhiệm hình sự.",
-      "point": null,
-      "hierarchy_path": [
-        "7eef1c6f9712c9a77af24be877851ca1",
-        "Chương I",
-        "Điều 2"
-      ]
-    },
-    "text": "Cơ sở của trách nhiệm hình sự\nChỉ người nào phạm một tội đã được Bộ luật hình sự quy định mới phải chịu trách nhiệm hình sự."
-  }
+    {
+        "chunk_id": "law_7eef1c6f9712c9a77af24be877851ca1_a1",
+        "node_type": "article",
+        "metadata": {
+            "document_id": "7eef1c6f9712c9a77af24be877851ca1",
+            "document_type": "Bộ luật",
+            "document_title": "Bộ luật Hình sự số 15/1999/QH10",
+            "doc_identity": "15/1999/QH10",
+            "major_names": [
+                "Tư pháp"
+            ],
+            "field_names": [
+                "Chưa phân loại"
+            ],
+            "issue_date": "1999-12-21",
+            "effect_date": "2000-07-01",
+            "effect_status_name": "Hết hiệu lực toàn bộ",
+            "expire_date": "2018-01-01",
+            "organ_names": [
+                "Quốc hội"
+            ],
+            "signer_title_names": [
+                "Chủ tịch Quốc hội"
+            ],
+            "signer_names": [
+                "Nông Đức Mạnh"
+            ],
+            "vbpl_url": "https://vbpl.vn/van-ban/chi-tiet/bo-luat-hinh-su-so-15-1999-qh10--6157",
+            "source_guid": null,
+            "scraped_date": "2026-07-01T20:04:58.071402+07:00",
+            "part_number": null,
+            "part_title": null,
+            "chapter_number": "I",
+            "chapter_title": "ĐIỀU KHOẢN CƠ BẢN",
+            "section_number": null,
+            "section_title": null,
+            "article_number": 1,
+            "article_title": "Nhiệm vụ của Bộ luật hình sự",
+            "clause_number": null,
+            "clause_title": "Bộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội.",
+            "point": null,
+            "hierarchy_path": [
+                "7eef1c6f9712c9a77af24be877851ca1",
+                "Chương I",
+                "Điều 1"
+            ]
+        },
+        "text": "Nhiệm vụ của Bộ luật hình sự\nBộ luật hình sự có nhiệm vụ bảo vệ chế độ xã hội chủ nghĩa, quyền làm chủ của nhân dân, bảo vệ quyền bình đẳng giữa đồng bào các dân tộc, bảo vệ lợi ích của Nhà nước, quyền, lợi ích hợp pháp của công dân, tổ chức, bảo vệ trật tự pháp luật xã hội chủ nghĩa, chống mọi hành vi phạm tội; đồng thời giáo dục mọi người ý thức tuân theo pháp luật, đấu tranh phòng ngừa và chống tội phạm.\nĐể thực hiện nhiệm vụ đó, Bộ luật quy định tội phạm và hình phạt đối với người phạm tội."
+    }
 ]

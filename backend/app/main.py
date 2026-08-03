@@ -40,26 +40,25 @@ async def startup_event():
     from backend.app.services.rag_service import rag_service
 
     corpus_path = settings.DATA_DIR / "corpus.json"
-    embeddings_path = settings.DB_DIR / "embeddings.npy"
 
     logger.info("Checking for corpus.json at startup...")
     if corpus_path.exists() and corpus_path.is_file():
         logger.info(f"Found corpus.json at {corpus_path}")
-        if not embeddings_path.exists():
-            logger.info("Database embeddings (.npy) not found. Starting automatic ingestion...")
+        if vector_db.is_empty():
+            logger.info("Vector database is empty. Starting automatic ingestion into ChromaDB...")
             try:
                 with open(corpus_path, "r", encoding="utf-8") as f:
                     raw_chunks = json.load(f)
 
                 if isinstance(raw_chunks, list):
                     count = rag_service.ingest_chunks(raw_chunks)
-                    logger.info(f"Successfully auto-ingested {count} chunks.")
+                    logger.info(f"Successfully auto-ingested {count} chunks into ChromaDB.")
                 else:
                     logger.error("Auto-ingestion failed: corpus.json is not a list of chunks.")
             except Exception as e:
                 logger.error(f"Failed to perform auto-ingestion: {e}")
         else:
-            logger.info("Database embeddings (.npy) already exist. Skipping auto-ingestion.")
+            logger.info("ChromaDB already initialized. Skipping auto-ingestion.")
     else:
         logger.info("corpus.json not found in data directory. System is ready for manual upload/ingestion.")
 
