@@ -20,6 +20,13 @@ interface ChatMessage {
   responseTime?: number;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+}
+
 interface Toast {
   message: string;
   type: 'success' | 'error' | 'info';
@@ -29,11 +36,44 @@ function App() {
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [ingesting, setIngesting] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  // Conversations list synced with LocalStorage
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    try {
+      const saved = localStorage.getItem('law_rag_conversations');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse conversations", e);
+      return [];
+    }
+  });
+
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    return localStorage.getItem('law_rag_active_conversation_id') || null;
+  });
+
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Sync conversations to localStorage
+  useEffect(() => {
+    localStorage.setItem('law_rag_conversations', JSON.stringify(conversations));
+  }, [conversations]);
+
+  // Sync activeConversationId to localStorage
+  useEffect(() => {
+    if (activeConversationId) {
+      localStorage.setItem('law_rag_active_conversation_id', activeConversationId);
+    } else {
+      localStorage.removeItem('law_rag_active_conversation_id');
+    }
+  }, [activeConversationId]);
+
+  // Derived active messages
+  const activeConv = conversations.find(c => c.id === activeConversationId);
+  const messages = activeConv ? activeConv.messages : [];
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'info') => {
@@ -123,16 +163,43 @@ function App() {
       content: searchQuery
     };
 
-    setMessages((prev) => [...prev, newUserMsg]);
+    let targetConvId = activeConversationId;
+    let historyPayload: { role: string; content: string }[] = [];
+
+    if (!targetConvId) {
+      // Create new conversation
+      targetConvId = Date.now().toString();
+      const newConv: Conversation = {
+        id: targetConvId,
+        title: searchQuery.substring(0, 35).trim() + (searchQuery.length > 35 ? '...' : ''),
+        messages: [newUserMsg],
+        createdAt: Date.now()
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(targetConvId);
+      historyPayload = [];
+    } else {
+      // Append user message to active conversation
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id === targetConvId) {
+            historyPayload = c.messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            }));
+            return {
+              ...c,
+              messages: [...c.messages, newUserMsg]
+            };
+          }
+          return c;
+        })
+      );
+    }
+
     setLoadingSearch(true);
 
     try {
-      // Format chat history (excluding the message we're currently sending)
-      const historyPayload = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 45000);
 
@@ -160,7 +227,17 @@ function App() {
           totalTokens: data.total_tokens,
           responseTime: data.response_time
         };
-        setMessages((prev) => [...prev, newAssistantMsg]);
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === targetConvId) {
+              return {
+                ...c,
+                messages: [...c.messages, newAssistantMsg]
+              };
+            }
+            return c;
+          })
+        );
       } else {
         const errorData = await res.json().catch(() => ({}));
         const newErrorMsg: ChatMessage = {
@@ -168,7 +245,17 @@ function App() {
           role: 'assistant',
           content: `**Lỗi hệ thống:** ${errorData.detail || 'Phản hồi thất bại từ máy chủ.'}`
         };
-        setMessages((prev) => [...prev, newErrorMsg]);
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === targetConvId) {
+              return {
+                ...c,
+                messages: [...c.messages, newErrorMsg]
+              };
+            }
+            return c;
+          })
+        );
       }
     } catch (err: any) {
       let message = 'Không thể kết nối tới dịch vụ phân tích. Vui lòng kiểm tra lại backend.';
@@ -181,17 +268,59 @@ function App() {
         role: 'assistant',
         content: `**Lỗi kết nối:** ${message}`
       };
-      setMessages((prev) => [...prev, newErrorMsg]);
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id === targetConvId) {
+            return {
+              ...c,
+              messages: [...c.messages, newErrorMsg]
+            };
+          }
+          return c;
+        })
+      );
       showToast(message, 'error');
     } finally {
       setLoadingSearch(false);
     }
   };
 
-  // Reset chat history
-  const handleResetChat = () => {
-    setMessages([]);
-    showToast('Đã làm mới cuộc hội thoại.', 'success');
+  const handleSelectConversation = (id: string) => {
+    setActiveConversationId(id);
+  };
+
+  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const conv = conversations.find(c => c.id === id);
+    const convTitle = conv ? ` "${conv.title}"` : '';
+    if (window.confirm(`Bạn có chắc chắn muốn xóa cuộc hội thoại${convTitle} không?`)) {
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+      }
+      showToast('Đã xóa cuộc hội thoại.', 'success');
+    }
+  };
+
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title: newTitle.trim() } : c))
+    );
+    showToast('Đã đổi tên cuộc hội thoại.', 'success');
+  };
+
+  const handleNewChat = () => {
+    setActiveConversationId(null);
+    showToast('Bắt đầu cuộc hội thoại mới.', 'success');
+  };
+
+  const handleClearAllConversations = () => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử các cuộc hội thoại không?')) {
+      setConversations([]);
+      setActiveConversationId(null);
+      showToast('Đã xóa toàn bộ lịch sử hội thoại.', 'success');
+    }
   };
 
   // Auto scroll to bottom of chat
@@ -212,8 +341,13 @@ function App() {
         onRefreshStatus={handleRefreshStatus}
         onIngestCustom={handleIngestCustom}
         ingesting={ingesting}
-        onResetChat={handleResetChat}
-        chatLength={messages.length}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
+        onNewChat={handleNewChat}
+        onClearAllConversations={handleClearAllConversations}
       />
 
       {/* Main Panel */}

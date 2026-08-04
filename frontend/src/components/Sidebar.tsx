@@ -1,10 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileJson, X, RefreshCw, Trash2 } from 'lucide-react';
+import { Upload, FileJson, X, RefreshCw, Trash2, MessageSquare, Plus, Edit2, Check } from 'lucide-react';
 
 export interface DBStatus {
   database_initialized: boolean;
   chunk_count: number;
   has_embeddings: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: any[];
+  createdAt: number;
 }
 
 interface SidebarProps {
@@ -13,8 +20,13 @@ interface SidebarProps {
   onRefreshStatus: () => void;
   onIngestCustom: (chunks: any[]) => Promise<void>;
   ingesting: boolean;
-  onResetChat: () => void;
-  chatLength: number;
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string, e: React.MouseEvent) => void;
+  onRenameConversation: (id: string, newTitle: string) => void;
+  onNewChat: () => void;
+  onClearAllConversations: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,13 +35,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRefreshStatus,
   onIngestCustom,
   ingesting,
-  onResetChat,
-  chatLength,
+  conversations,
+  activeConversationId,
+  onSelectConversation,
+  onDeleteConversation,
+  onRenameConversation,
+  onNewChat,
+  onClearAllConversations,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedChunks, setParsedChunks] = useState<any[] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+
+  const startEditing = (id: string, currentTitle: string) => {
+    setEditingId(id);
+    setEditingTitle(currentTitle);
+  };
+
+  const handleSaveRename = (id: string) => {
+    if (editingTitle.trim()) {
+      onRenameConversation(id, editingTitle.trim());
+    }
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleCancelRename = () => {
+    setEditingId(null);
+    setEditingTitle('');
+  };
 
   const getBackendStatus = () => {
     if (dbStatus !== null) {
@@ -200,21 +238,128 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Conversation Section */}
-      <div className="sidebar-section bottom">
-        <div className="sidebar-header flex-header-center">
-          <span>Hội Thoại</span>
+      {/* Conversations History Section */}
+      <div className="sidebar-section conversations-section">
+        <div className="sidebar-header flex-header">
+          <span>Lịch Sử Hội Thoại</span>
+          <button 
+            onClick={onNewChat}
+            className="btn-refresh"
+            title="Tạo cuộc hội thoại mới"
+          >
+            <Plus size={16} />
+          </button>
         </div>
-        <p className="sidebar-desc">
-          Lịch sử chat được lưu trữ tạm thời trong phiên làm việc hiện tại.
-        </p>
+
         <button 
-          className={`btn-gold-outline btn-reset-chat ${chatLength > 0 ? 'active' : ''}`} 
-          onClick={onResetChat}
-          disabled={chatLength === 0}
+          className="btn-gold-outline btn-new-chat"
+          onClick={onNewChat}
+        >
+          <Plus size={16} />
+          <span>Hội thoại mới</span>
+        </button>
+
+        {conversations.length === 0 ? (
+          <p className="sidebar-desc" style={{ textAlign: 'center', fontStyle: 'italic' }}>
+            Chưa có cuộc hội thoại nào.
+          </p>
+        ) : (
+          <div className="conversations-list">
+            {conversations.map((conv) => {
+              const isActive = conv.id === activeConversationId;
+              const isEditing = conv.id === editingId;
+
+              return (
+                <div 
+                  key={conv.id} 
+                  className={`conversation-item ${isActive ? 'active' : ''}`}
+                  onClick={() => !isEditing && onSelectConversation(conv.id)}
+                >
+                  <div className="conversation-item-left">
+                    <MessageSquare size={14} className="file-json-icon" style={{ flexShrink: 0 }} />
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        className="conversation-rename-input"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(conv.id);
+                          if (e.key === 'Escape') handleCancelRename();
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={() => handleSaveRename(conv.id)}
+                      />
+                    ) : (
+                      <span className="conversation-item-title" title={conv.title}>
+                        {conv.title}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {!isEditing && (
+                    <div className="conversation-item-actions">
+                      <button 
+                        className="btn-conv-action"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(conv.id, conv.title);
+                        }}
+                        title="Đổi tên"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button 
+                        className="btn-conv-action delete"
+                        onClick={(e) => onDeleteConversation(conv.id, e)}
+                        title="Xóa"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div className="conversation-item-actions" style={{ display: 'flex' }}>
+                      <button 
+                        className="btn-conv-action"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSaveRename(conv.id);
+                        }}
+                        title="Lưu"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button 
+                        className="btn-conv-action delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelRename();
+                        }}
+                        title="Hủy"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Reset/Clean Section */}
+      <div className="sidebar-section bottom">
+        <button 
+          className={`btn-gold-outline btn-reset-chat ${conversations.length > 0 ? 'active' : ''}`} 
+          onClick={onClearAllConversations}
+          disabled={conversations.length === 0}
         >
           <Trash2 size={16} />
-          <span>Xóa lịch sử chat</span>
+          <span>Xóa tất cả hội thoại</span>
         </button>
       </div>
     </div>

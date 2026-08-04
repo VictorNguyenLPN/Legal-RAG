@@ -2,8 +2,6 @@
   <img src="images/logo.png" alt="Logo" height="200" />
 </p>
 
-<h1 align="center">Legal RAG</h1>
-
 <p align="center">
   <a href="https://github.com/VictorNguyenLPN/Legal-RAG/stargazers">
     <img src="https://img.shields.io/github/stars/VictorNguyenLPN/Legal-RAG?style=for-the-badge&logo=github&color=33a8ff" alt="Stars" />
@@ -21,12 +19,12 @@
 </p>
 
 <p align="center">
-  <a href="README_EN.md">English</a> | <a href="README.md">Tiếng Việt</a> | <a href="README_ZH.md">简体中文</a>
+  <a href="README_EN.md">English 🌐</a> | <a href="README.md">Tiếng Việt 🇻🇳</a> | <a href="README_ZH.md">简体中文 🇨🇳</a>
 </p>
 
 ---
 
->[!NOTE] 当前版本：v2.3.2 (2026年8月3日)
+>[!NOTE] 当前版本：v2.4.0 (2026年8月4日)
 
 本法律文献问答系统完全基于 Python 构建，结合使用 BM25 和 Google Gemini Embedding 进行检索，并使用 Google Gemini 2.5 Flash Lite 进行回答。
 
@@ -42,7 +40,9 @@
 
 - **大语言模型 (LLM)：** `gemini-2.5-flash`。
 
-- **直观界面 (Intuitive UI)：** `React` + `TailwindCSS`。
+- **对话历史记录管理与存储：** 支持将多会话聊天历史持久化存储在浏览器的 LocalStorage 中。允许用户创建新会话、切换历史会话、在侧边栏中直接行内重命名标题，以及在进行删除操作时弹出确认提示（或清空所有历史）。
+
+- **直观界面 (Intuitive UI)：** `React` + `Vite` + `TypeScript`。
 
 ---
 
@@ -229,3 +229,5 @@ JSON 文件必须是一个对象数组，每个对象代表一个法律文本分
 - **v2.3.1 (2026年8月3日)**: 界面微调。
 
 - **v2.3.2 (2026年8月3日)**: 优化数据库查询性能（通过元数据计算集合大小，而不是在搜索查询时反序列化所有分块），将所有行内 CSS 样式迁移到独立 CSS 文件中，并清理冗余代码与注释。每次回答添加响应延迟和 Token 使用量统计。
+
+- **v2.4.0 (2026年8月4日)**: 实现了基于浏览器 LocalStorage 的持久化多会话对话历史记录。支持新建会话、切换对话、行内重命名标题，以及在执行删除操作时进行弹窗确认。

@@ -1,6 +1,5 @@
 <p align="center">
   <img src="images/logo.png" alt="Logo" height="200" />
-  <h1 align="center">Legal RAG</h1>
 </p>
 
 <!-- <h1 align="center">Legal RAG</h1> -->
@@ -22,12 +21,12 @@
 </p>
 
 <p align="center">
-  <a href="README_EN.md">English</a> | <a href="README.md">Tiếng Việt</a> | <a href="README_ZH.md">简体中文</a>
+  <a href="README_EN.md">English 🌐</a> | <a href="README.md">Tiếng Việt 🇻🇳</a> | <a href="README_ZH.md">简体中文 🇨🇳</a>
 </p>
 
 ---
 
->[!NOTE] Current Version: v2.3.2 (03/08/2026)
+>[!NOTE] Current Version: v2.4.0 (04/08/2026)
 
 The Legal Document Question-Answering System is built entirely in Python, using BM25 combined with Google Gemini Embedding for search retrieval, and Google Gemini for answer generation.
 
@@ -42,6 +41,8 @@ The Legal Document Question-Answering System is built entirely in Python, using 
 - **Vector Database:** Powered by ChromaDB (supports local Persistent directory storage or HTTP connection to Docker/remote server).
 
 - **LLM**: Google Gemini (`gemini-3.1-flash-lite` / `gemini-2.5-flash`).
+
+- **Conversation History Management:** Persistent storage of multi-session chats in browser LocalStorage. Allows users to create new sessions, toggle old chats, rename titles inline on the sidebar, and delete specific conversations with deletion confirmations or clear all history.
 
 - **Intuitive UI:** Sleek frontend built with `React` + `Vite` + `TypeScript`.
 
@@ -231,3 +232,5 @@ The JSON file must be a JSON array of objects, with each object structured as fo
 - v2.3.1 (03/08/2026): Minor layout adjustments.
 
 - v2.3.2 (03/08/2026): Optimized database collection size calculations (using metadata counts instead of retrieving all chunks on search queries), migrated React inline styles to stylesheet classes, and removed redundant/commented code snippets. Added latency and token usage for each response.  
+
+- v2.4.0 (04/08/2026): Implemented persistent multi-session conversation history using browser LocalStorage. Supported creating new sessions, switching conversations, inline renaming, and deletion actions with confirmation alerts.

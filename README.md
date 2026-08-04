@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="images/logo.png" alt="Logo" height="200" />
+  <img src="images/logo.png" alt="Logo" height="150" />
 </p>
-
-<h1 align="center">Legal RAG</h1>
 
 <p align="center">
   <a href="https://github.com/VictorNguyenLPN/Legal-RAG/stargazers">
@@ -21,12 +19,12 @@
 </p>
 
 <p align="center">
-  <a href="README_EN.md">English</a> | <a href="README.md">Tiếng Việt</a> | <a href="README_ZH.md">简体中文</a>
+  <a href="README_EN.md">English 🌐</a> | <a href="README.md">Tiếng Việt 🇻🇳</a> | <a href="README_ZH.md">简体中文 🇨🇳</a>
 </p>
 
 ---
 
->[!NOTE] Phiên bản hiện tại: v2.3.2 (03/08/2026)
+>[!NOTE] Phiên bản hiện tại: v2.4.0 (04/08/2026)
 
 Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toàn bằng Python, sử dụng BM25 kết hợp với Google Gemini Embedding để tìm kiếm và trả lời câu hỏi bằng Google Gemini 2.5 Flash Lite.
 
@@ -42,7 +40,9 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toà
 
 - **LLM**: `gemini-2.5-flash`.
 
-- **Giao diện Trực quan:** `React` + `TailwindCSS`.
+- **Quản lý & Lưu trữ Lịch sử Hội thoại:** Hỗ trợ lưu trữ persistent lịch sử chat nhiều phiên làm việc dưới LocalStorage, cho phép người dùng tạo mới, chuyển đổi qua lại giữa các cuộc hội thoại cũ, đổi tên trực tiếp trên sidebar, và xóa từng hội thoại (có xác nhận bảo vệ) hoặc xóa sạch toàn bộ.
+
+- **Giao diện Trực quan:** `React` + `Vite` + `TypeScript`.
 
 ---
 
@@ -227,3 +227,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.3.1 (03/08/2026): Chỉnh sửa giao diện
 
 - v2.3.2 (03/08/2026): Tối ưu hóa truy vấn cơ sở dữ liệu (tính toán kích thước collection thay vì deserialize toàn bộ), chuyển toàn bộ inline CSS sang tệp CSS riêng và dọn dẹp các ghi chú/mã code thừa. Bổ sung latency và token usage cho mỗi response.  
+
+- v2.4.0 (04/08/2026): Triển khai cơ chế lưu trữ lịch sử hội thoại nhiều phiên làm việc (multi-conversation history) persistent dưới LocalStorage trình duyệt. Hỗ trợ tạo cuộc chat mới, chọn cuộc trò chuyện cũ, đổi tên trực tiếp và xóa phiên chat với hộp thoại xác nhận.
