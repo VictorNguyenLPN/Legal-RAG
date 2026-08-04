@@ -59,6 +59,22 @@ The Legal Document Question-Answering System is built entirely in Python, using 
 ### Answers and Citations
 ![Citations and Sources](images/3.png)
 
+
+## Flow
+
+```mermaid
+graph TD
+    A[User Query & History] --> B[Step 0: Query Condensation <br/> gemini-3.1-flash-lite]
+    B -->|Condensed Query| C1[Step 1: Dense Search <br/> gemini-embedding-2 & ChromaDB]
+    B -->|Condensed Query| C2[Step 2: Sparse Search <br/> BM25 Okapi]
+    C1 -->|Dense Results| D[Step 3: Reciprocal Rank Fusion <br/> RRF Score Calculation]
+    C2 -->|Sparse Results| D
+    D -->|Top N Chunks| E[Step 4: Prompt Formulation <br/> Context + History + Query]
+    E --> F[Step 5: LLM Generation <br/> gemini-3.1-flash-lite]
+    F --> G[Step 6: Post-processing <br/> Fallback Check & Source Cleanup]
+    G --> H[Final QueryResponse]
+```
+
 ## Folder Structure
 
 ```text
