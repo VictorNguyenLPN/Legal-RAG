@@ -92,10 +92,10 @@ body {
 
 /* Status Indicator Box */
 .status-box {
-  background-color: rgba(255, 255, 255, 0.04);
+  /* background-color: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.25rem;
-  border-radius: 8px;
+  padding: 1.25rem; */
+  /* border-radius: 8px; */
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
