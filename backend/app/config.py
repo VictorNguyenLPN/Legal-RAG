@@ -27,12 +27,10 @@ class Settings(BaseSettings):
     RRF_TOP_N: int = 5
     RRF_K: int = 60
 
-    # ChromaDB settings
-    CHROMA_SERVER_TYPE: str = "persistent"
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8000
-    CHROMA_COLLECTION_NAME: str = "legal_chunks"
-    CHROMA_PERSIST_DIR: str = str(Path(__file__).resolve().parent.parent.parent / "data" / "chroma")
+    # Qdrant settings
+    QDRANT_URL: str = ""
+    QDRANT_API_KEY: str = ""
+    QDRANT_COLLECTION_NAME: str = "legal_chunks"
     
     # Pydantic Settings Configuration
     model_config = SettingsConfigDict(
@@ -46,4 +44,4 @@ settings = Settings()
 # Ensure directories exist
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
 settings.DB_DIR.mkdir(parents=True, exist_ok=True)
-Path(settings.CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
+

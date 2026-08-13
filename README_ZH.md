@@ -24,21 +24,26 @@
 
 ---
 
->[!NOTE] 当前版本：v2.4.0 (2026年8月4日)
+>[!NOTE] 当前版本：v3.0.0 (2026年8月13日)
 
-本法律文献问答系统完全基于 Python 构建，结合使用 BM25 和 Google Gemini Embedding 进行检索，并使用 Google Gemini 2.5 Flash Lite 进行回答。
+本法律文献问答系统（Legal RAG）完全基于 Python 构建，整合了基于 **Qdrant** 的混合检索 (Dense & Sparse) 架构，利用 **underthesea** 进行越南语分词，结合 Gemini **Listwise Reranking**（列表重排）层，并使用 Google Gemini 3.1 Flash 生成高准确度的答案。
 
 ## 项目特点
 
 - **混合检索 (Hybrid Search)：**
-  - **稠密检索 (Dense search)：** `gemini-embedding-2` + `余弦相似度 (cosine similarity)`。
-  - **稀疏检索 (Sparse search)：** `BM25`（针对越南语进行了优化）。
+  - **稠密检索 (Dense search)：** 基于语义表征的 `gemini-embedding-2` + `余弦相似度 (cosine similarity)`。
+  - **稀疏检索 (Sparse search)：** 运行在 Qdrant 端的原生稀疏检索，使用 `FastEmbed` (`Qdrant/bm25` 模型) 生成。
 
-- **互惠排名融合 (RRF)：** 结合并优化稠密检索与稀疏检索的排序结果。
+- **越南语分词处理：** 集成 `underthesea` 工具进行越南语专业分词，显著提升稀疏检索在越南语法律文本上的精确度。
 
-- **向量数据库 (Vector Database)：** 使用 ChromaDB（支持本地 Persistent 持久化文件存储或通过 HTTP Client 连接 Docker 服务）。
+- **Listwise Reranking 重排：** 利用 Gemini API 和严苛的 JSON 输出结构 (`response_schema`) 对 RRF 融合产生的候选文档进行 Listwise（列表式）重排，保留最相关的 top 5 文档提供给上下文。
 
-- **大语言模型 (LLM)：** `gemini-2.5-flash`。
+- **云原生向量数据库：** 迁移至 **Qdrant**，支持以下 3 种运行模式：
+  - **Qdrant Cloud:** 数据持久化保存在云端（推荐生产环境）。
+  - **Qdrant Local Persistent:** 数据保存在本地 `data/db/qdrant` 目录下，避免每次重启服务器重新生成向量消耗 API 额度。
+  - **Qdrant In-Memory:** 数据完全保存在 RAM 中（当设置 `QDRANT_USE_MEMORY=true` 时）。
+
+- **大语言模型 (LLM)：** 使用 `gemini-3.1-flash-lite` 负责生成回答以及对话整理。
 
 - **对话历史记录管理与存储：** 支持将多会话聊天历史持久化存储在浏览器的 LocalStorage 中。允许用户创建新会话、切换历史会话、在侧边栏中直接行内重命名标题，以及在进行删除操作时弹出确认提示（或清空所有历史）。
 
@@ -58,20 +63,23 @@
 ![引用与来源界面](images/3.png)
 
 
-## Flow
+## 系统架构 (System Architecture)
 
 ```mermaid
 graph TD
-    A[User Query & History] --> B[Step 0: Query Condensation <br/> gemini-3.1-flash-lite]
-    B -->|Condensed Query| C1[Step 1: Dense Search <br/> gemini-embedding-2 & ChromaDB]
-    B -->|Condensed Query| C2[Step 2: Sparse Search <br/> BM25 Okapi]
-    C1 -->|Dense Results| D[Step 3: Reciprocal Rank Fusion <br/> RRF Score Calculation]
-    C2 -->|Sparse Results| D
-    D -->|Top N Chunks| E[Step 4: Prompt Formulation <br/> Context + History + Query]
-    E --> F[Step 5: LLM Generation <br/> gemini-3.1-flash-lite]
-    F --> G[Step 6: Post-processing <br/> Fallback Check & Source Cleanup]
-    G --> H[Final QueryResponse]
+    A[用户问题与对话历史] --> B[问题压缩与整理 <br/> gemini-3.1-flash-lite]
+    B -->|压缩后的问题| C[越南语分词 <br/> underthesea]
+    C --> C1[生成稠密向量 <br/> gemini-embedding-2]
+    C --> C2[生成稀疏向量 <br/> FastEmbed Qdrant/bm25]
+    C1 -->|稠密向量| D[Qdrant 混合检索查询 <br/> 云端 / 本地 / 内存]
+    C2 -->|稀疏向量| D
+    D -->|Top 20 混合检索文档| E[互惠排名融合 <br/> RRF Fusion]
+    E -->|合并候选集| F[Listwise Rerank 重排 <br/> Gemini Structured Output]
+    F -->|Top 5 核心上下文| G[构建 Context Prompt <br/> Context + History + Query]
+    G --> H[LLM 答案生成 <br/> gemini-3.1-flash-lite]
+    H --> I[后处理与返回结果]
 ```
+
 ## 目录结构
 
 ```text
@@ -81,14 +89,14 @@ Law-RAG/
 │       ├── api/
 │       │   └── routes.py         # API 路由定义
 │       ├── services/
-│       │   ├── gemini_service.py # Gemini API 服务集成
+│       │   ├── gemini_service.py # Gemini API 服务集成 (Embedding, Generation, Reranking)
 │       │   └── rag_service.py    # 协调 RAG 管道流程
 │       ├── retrieval/
-│       │   ├── dense.py          # 基于 ChromaDB 的向量相似度检索
-│       │   ├── sparse.py         # 越南语 BM25 关键词检索
+│       │   ├── dense.py          # Qdrant 稠密检索
+│       │   ├── sparse.py         # Qdrant 稀疏检索
 │       │   └── fusion.py         # 互惠排名融合 (RRF) 算法实现
 │       ├── database/
-│       │   └── vector_db.py      # ChromaDB 数据库连接与操作管理
+│       │   └── vector_db.py      # Qdrant 数据库连接与操作管理 (云端/本地)
 │       ├── models/
 │       │   └── schema.py         # 用于 API 数据验证的 Pydantic 模型
 │       ├── config.py             # 环境变量与超参数配置
@@ -100,7 +108,8 @@ Law-RAG/
 │       └── index.css             # 主样式 CSS 文件
 ├── data/
 │   ├── input/                    # JSON 格式原始输入数据目录
-│   └── chroma/                   # 本地 ChromaDB 持久化存储目录 (Persistent 模式)
+│   └── db/
+│       └── qdrant/               # 本地 Qdrant 持久化存储目录
 ├── requirements.txt              # 后端依赖库
 └── README.md                     # 越南语使用说明
 ```
@@ -246,3 +255,5 @@ JSON 文件必须是一个对象数组，每个对象代表一个法律文本分
 - **v2.3.2 (2026年8月3日)**: 优化数据库查询性能（通过元数据计算集合大小，而不是在搜索查询时反序列化所有分块），将所有行内 CSS 样式迁移到独立 CSS 文件中，并清理冗余代码与注释。每次回答添加响应延迟和 Token 使用量统计。
 
 - **v2.4.0 (2026年8月4日)**: 实现了基于浏览器 LocalStorage 的持久化多会话对话历史记录。支持新建会话、切换对话、行内重命名标题，以及在执行删除操作时进行弹窗确认。
+
+- **v2.5.0 (2026年8月13日)**: 将 RAG 架构升级为基于 Qdrant 的云原生模式（支持云端/本地持久化/内存模式）。在 Qdrant 侧集成了基于 FastEmbed 的原生稀疏检索、underthesea 越南语分词引擎、以及基于 Gemini API 的 Listwise 列表重排机制。

@@ -28,20 +28,20 @@ async def lifespan(app: FastAPI):
     if corpus_path.exists() and corpus_path.is_file():
         logger.info(f"Found corpus.json at {corpus_path}")
         if vector_db.is_empty():
-            logger.info("Vector database is empty. Starting automatic ingestion into ChromaDB...")
+            logger.info("Vector database is empty. Starting automatic ingestion into Qdrant...")
             try:
                 with open(corpus_path, "r", encoding="utf-8") as f:
                     raw_chunks = json.load(f)
 
                 if isinstance(raw_chunks, list):
                     count = rag_service.ingest_chunks(raw_chunks)
-                    logger.info(f"Successfully auto-ingested {count} chunks into ChromaDB.")
+                    logger.info(f"Successfully auto-ingested {count} chunks into Qdrant.")
                 else:
                     logger.error("Auto-ingestion failed: corpus.json is not a list of chunks.")
             except Exception as e:
                 logger.error(f"Failed to perform auto-ingestion: {e}")
         else:
-            logger.info("ChromaDB already initialized. Skipping auto-ingestion.")
+            logger.info("Qdrant already initialized. Skipping auto-ingestion.")
     else:
         logger.info("corpus.json not found in data directory. System is ready for manual upload/ingestion.")
     yield

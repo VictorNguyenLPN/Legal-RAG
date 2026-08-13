@@ -1,8 +1,15 @@
+import os
 import json
+import uuid
 import logging
-import chromadb
 from typing import List, Dict, Tuple, Optional
 import numpy as np
+# pyrefly: ignore [missing-import]
+from qdrant_client import QdrantClient
+# pyrefly: ignore [missing-import]
+from qdrant_client.http import models
+# pyrefly: ignore [missing-import]
+from fastembed import SparseTextEmbedding
 from backend.app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -10,143 +17,247 @@ logger = logging.getLogger(__name__)
 class VectorDB:
     def __init__(self):
         # Initialize client based on config
-        if settings.CHROMA_SERVER_TYPE == "http":
-            logger.info(f"Connecting to ChromaDB Server at http://{settings.CHROMA_HOST}:{settings.CHROMA_PORT}...")
-            self.client = chromadb.HttpClient(
-                host=settings.CHROMA_HOST,
-                port=settings.CHROMA_PORT
+        qdrant_url = os.getenv("QDRANT_URL", "")
+        qdrant_api_key = os.getenv("QDRANT_API_KEY", "")
+        
+        if qdrant_url:
+            logger.info(f"Connecting to Qdrant Cloud at {qdrant_url}...")
+            self.client = QdrantClient(
+                url=qdrant_url,
+                api_key=qdrant_api_key
             )
         else:
-            logger.info(f"Initializing Persistent ChromaDB Client at {settings.CHROMA_PERSIST_DIR}...")
-            self.client = chromadb.PersistentClient(
-                path=settings.CHROMA_PERSIST_DIR
-            )
+            # Default to local persistent storage to save embedding API costs across server restarts.
+            # Set QDRANT_USE_MEMORY=true in .env if purely in-memory ephemeral DB is desired.
+            use_memory = os.getenv("QDRANT_USE_MEMORY", "false").lower() == "true"
+            if use_memory:
+                logger.info("QDRANT_URL is not set. Initializing Ephemeral In-Memory Qdrant Client...")
+                self.client = QdrantClient(":memory:")
+            else:
+                db_path = str(settings.DB_DIR / "qdrant")
+                logger.info(f"QDRANT_URL is not set. Initializing Local Persistent Qdrant Client at {db_path}...")
+                self.client = QdrantClient(path=db_path)
+            
+        self.collection_name = settings.QDRANT_COLLECTION_NAME # reuse config collection name
         
-        # Get or create collection
-        # Cosine distance will be calculated. Space is 'cosine'.
-        self.collection = self.client.get_or_create_collection(
-            name=settings.CHROMA_COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"}
-        )
+        # Initialize FastEmbed Sparse embedding model for BM25
+        logger.info("Initializing FastEmbed SparseTextEmbedding (Qdrant/bm25)...")
+        self.sparse_model = SparseTextEmbedding(model_name="Qdrant/bm25")
+        
+        # Call with default 3072 dimensions for gemini-embedding-2
+        self._ensure_collection(vector_size=3072)
+
+    def _ensure_collection(self, vector_size: int = 3072):
+        try:
+            # Check if collection exists
+            collections = self.client.get_collections().collections
+            exists = any(c.name == self.collection_name for c in collections)
+            
+            if not exists:
+                logger.info(f"Creating Qdrant collection: {self.collection_name} with dense vector size {vector_size}...")
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config={
+                        "dense": models.VectorParams(
+                            size=vector_size,
+                            distance=models.Distance.COSINE
+                        )
+                    },
+                    sparse_vectors_config={
+                        "sparse": models.SparseVectorParams()
+                    }
+                )
+                logger.info(f"Successfully created collection {self.collection_name}.")
+        except Exception as e:
+            logger.error(f"Error ensuring Qdrant collection exists: {e}")
 
     def save(self, chunks: List[Dict], embeddings: np.ndarray) -> None:
         """
-        Saves chunks metadata and dense embeddings to ChromaDB.
+        Saves chunks metadata, dense embeddings, and sparse embeddings to Qdrant.
+        Using .upsert() for incremental/intelligent ingestion.
         """
         if not chunks:
             return
 
-        # 1. Clear existing collection to perform a fresh overwrite ingestion
-        try:
-            existing = self.collection.get()
-            if existing and existing.get("ids"):
-                self.collection.delete(ids=existing["ids"])
-                logger.info(f"Cleared {len(existing['ids'])} existing entries from ChromaDB collection.")
-        except Exception as e:
-            logger.warning(f"Failed to clear existing collection: {e}")
-
-        # 2. Prepare metadata and documents
-        ids = [chunk["chunk_id"] for chunk in chunks]
-        documents = [chunk.get("text", "") for chunk in chunks]
-        
-        # Serialize the entire chunk dictionary to preserve original nested format
-        metadatas = [{"chunk_json": json.dumps(chunk, ensure_ascii=False)} for chunk in chunks]
         embeddings_list = embeddings.tolist()
+        vector_size = len(embeddings_list[0])
+        
+        # Re-ensure collection exists with the exact incoming vector size
+        self._ensure_collection(vector_size=vector_size)
 
-        # 3. Add to ChromaDB
-        self.collection.add(
-            ids=ids,
-            embeddings=embeddings_list,
-            metadatas=metadatas,
-            documents=documents
+        logger.info(f"Generating sparse embeddings for {len(chunks)} chunks...")
+        
+        texts = []
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            doc_title = metadata.get("document_title") or ""
+            hierarchy = metadata.get("hierarchy_path") or []
+            hierarchy_str = " > ".join([str(h) for h in hierarchy if h])
+            article_title = metadata.get("article_title") or ""
+            text = chunk.get("text") or ""
+            
+            parts = [
+                f"Văn bản: {doc_title}",
+                f"Vị trí cấu trúc: {hierarchy_str}",
+                f"Tiêu đề Điều: {article_title}",
+                f"Nội dung điều khoản: {text}"
+            ]
+            formatted_text = "\n".join(parts)
+            
+            # Apply Vietnamese tokenizer before embedding for sparse search
+            # pyrefly: ignore [missing-import]
+            from underthesea import word_tokenize
+            tokenized_text = word_tokenize(formatted_text, format="text")
+            texts.append(tokenized_text)
+
+        # Generate sparse embeddings
+        sparse_embeddings = list(self.sparse_model.embed(texts))
+        
+        points = []
+        for idx, chunk in enumerate(chunks):
+            chunk_id = chunk["chunk_id"]
+            # Convert chunk_id to UUID deterministically
+            qdrant_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_id))
+            
+            # Store the original chunk
+            payload = {
+                "chunk_json": json.dumps(chunk, ensure_ascii=False),
+                "text": chunk.get("text", "")
+            }
+            
+            # Qdrant sparse vector format
+            sparse_vec = sparse_embeddings[idx]
+            
+            points.append(models.PointStruct(
+                id=qdrant_id,
+                vector={
+                    "dense": embeddings_list[idx],
+                    "sparse": models.SparseVector(
+                        indices=sparse_vec.indices.tolist(),
+                        values=sparse_vec.values.tolist()
+                    )
+                },
+                payload=payload
+            ))
+            
+        self.client.upsert(
+            collection_name=self.collection_name,
+            points=points
         )
-        logger.info(f"Saved {len(chunks)} chunks & embeddings to ChromaDB collection: {settings.CHROMA_COLLECTION_NAME}.")
+        logger.info(f"Successfully upserted {len(chunks)} chunks to Qdrant.")
 
-    def load(self) -> Tuple[List[Dict], Optional[np.ndarray]]:
+    def search_dense(self, query_vector: List[float], top_k: int) -> List[Tuple[Dict, float]]:
         """
-        Mock load method for backward compatibility.
+        Search using dense vector cosine similarity in Qdrant.
         """
-        return self.chunks, self.embeddings
+        try:
+            results = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_vector,
+                using="dense",
+                limit=top_k
+            ).points
+            output = []
+            for hit in results:
+                if hit.payload and "chunk_json" in hit.payload:
+                    chunk = json.loads(hit.payload["chunk_json"])
+                    output.append((chunk, hit.score))
+            return output
+        except Exception as e:
+            logger.error(f"Error performing dense search in Qdrant: {e}")
+            return []
+
+    def search_sparse(self, query_text: str, top_k: int) -> List[Tuple[Dict, float]]:
+        """
+        Search using sparse vector BM25 in Qdrant.
+        """
+        try:
+            # Tokenize query
+            # pyrefly: ignore [missing-import]
+            from underthesea import word_tokenize
+            tokenized_query = word_tokenize(query_text, format="text")
+            
+            # Generate sparse vector
+            query_sparse = list(self.sparse_model.embed([tokenized_query]))[0]
+            
+            results = self.client.query_points(
+                collection_name=self.collection_name,
+                query=models.SparseVector(
+                    indices=query_sparse.indices.tolist(),
+                    values=query_sparse.values.tolist()
+                ),
+                using="sparse",
+                limit=top_k
+            ).points
+            output = []
+            for hit in results:
+                if hit.payload and "chunk_json" in hit.payload:
+                    chunk = json.loads(hit.payload["chunk_json"])
+                    output.append((chunk, hit.score))
+            return output
+        except Exception as e:
+            logger.error(f"Error performing sparse search in Qdrant: {e}")
+            return []
+
+    def search(self, query_vector: List[float], top_k: int) -> List[Tuple[Dict, float]]:
+        """
+        Backward compatible search method mapping to search_dense.
+        """
+        return self.search_dense(query_vector, top_k)
 
     @property
     def chunks(self) -> List[Dict]:
         """
-        Retrieves all original chunks from ChromaDB.
-        Used primarily by SparseSearch (BM25 Okapi indexer).
+        Retrieves all original chunks from Qdrant by scrolling.
         """
         try:
-            results = self.collection.get()
+            if self.is_empty():
+                return []
             chunks_list = []
-            if results and results.get("metadatas"):
-                for meta in results["metadatas"]:
-                    if meta and "chunk_json" in meta:
-                        chunks_list.append(json.loads(meta["chunk_json"]))
+            next_page_offset = None
+            while True:
+                results, next_page_offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    with_payload=True,
+                    with_vectors=False,
+                    offset=next_page_offset
+                )
+                for point in results:
+                    if point.payload and "chunk_json" in point.payload:
+                        chunks_list.append(json.loads(point.payload["chunk_json"]))
+                if next_page_offset is None:
+                    break
             return chunks_list
         except Exception as e:
-            logger.error(f"Error fetching chunks from ChromaDB: {e}")
+            logger.error(f"Error scrolling chunks from Qdrant: {e}")
             return []
 
     @property
     def embeddings(self) -> Optional[np.ndarray]:
         """
         Mock embeddings property for backward compatibility with status endpoint.
-        Returns a mock array if ChromaDB has data, else None.
         """
         if not self.is_empty():
-            # Return a simple mock to indicate embeddings exist
             return np.array([1])
         return None
 
     def is_empty(self) -> bool:
-        """
-        Checks if the ChromaDB collection is empty.
-        """
         try:
-            return self.collection.count() == 0
+            collections = self.client.get_collections().collections
+            if not any(c.name == self.collection_name for c in collections):
+                return True
+            return self.client.count(collection_name=self.collection_name).count == 0
         except Exception as e:
-            logger.error(f"Error checking if ChromaDB is empty: {e}")
+            logger.error(f"Error checking if Qdrant is empty: {e}")
             return True
 
     def __len__(self) -> int:
-        """
-        Returns the number of documents/chunks in the collection.
-        """
         try:
-            return self.collection.count()
+            return self.client.count(collection_name=self.collection_name).count
         except Exception as e:
-            logger.error(f"Error getting collection count: {e}")
+            logger.error(f"Error getting Qdrant collection count: {e}")
             return 0
-
-    def search(self, query_vector: List[float], top_k: int) -> List[Tuple[Dict, float]]:
-        """
-        Queries ChromaDB directly using the query vector.
-        Returns a list of tuples containing (chunk, cosine_similarity_score).
-        """
-        if self.is_empty():
-            return []
-
-        try:
-            results = self.collection.query(
-                query_embeddings=[query_vector],
-                n_results=top_k
-            )
-            
-            output = []
-            if results and results.get("ids") and len(results["ids"]) > 0:
-                ids = results["ids"][0]
-                metadatas = results["metadatas"][0]
-                distances = results["distances"][0]
-                
-                for meta, dist in zip(metadatas, distances):
-                    if meta and "chunk_json" in meta:
-                        chunk = json.loads(meta["chunk_json"])
-                        # Cosine similarity = 1.0 - Cosine distance
-                        similarity = 1.0 - float(dist)
-                        output.append((chunk, similarity))
-            return output
-        except Exception as e:
-            logger.error(f"Error performing search in ChromaDB: {e}")
-            return []
 
 # Singleton instance of VectorDB
 vector_db = VectorDB()

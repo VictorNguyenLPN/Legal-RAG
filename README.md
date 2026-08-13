@@ -24,21 +24,26 @@
 
 ---
 
->[!NOTE] Phiên bản hiện tại: v2.4.0 (04/08/2026)
+>[!NOTE] Phiên bản hiện tại: v3.0.0 (13/08/2026)
 
-Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toàn bằng Python, sử dụng BM25 kết hợp với Google Gemini Embedding để tìm kiếm và trả lời câu hỏi bằng Google Gemini 2.5 Flash Lite.
+Hệ thống Hỏi Đáp Văn Bản Pháp Luật (Legal RAG) được xây dựng hoàn toàn bằng Python, tích hợp tìm kiếm kết hợp Hybrid Search (Dense & Sparse) trên nền tảng **Qdrant**, sử dụng bộ tách từ tiếng Việt **underthesea**, kết hợp **Listwise Reranking** bằng Gemini và sinh câu trả lời bằng Google Gemini 3.1 Flash.
 
 ## Tính năng nổi bật
 
-- **Hybrid Search:**
-  - **Dense search:** `gemini-embedding-2` + `cosine similarity`.
-  - **Sparse search:** `BM25`
+- **Hybrid Search (Tìm kiếm kết hợp):**
+  - **Dense search:** Biểu diễn ngữ nghĩa bằng `gemini-embedding-2` + `cosine similarity`.
+  - **Sparse search:** Tìm kiếm từ khóa hiệu năng cao trên Qdrant sử dụng mô hình sparse `FastEmbed` (`Qdrant/bm25`).
 
-- **Xếp hạng dung hợp RRF:** Kết hợp, tối ưu kết quả từ Dense và Sparse Search.
+- **Xử lý tiếng Việt (Vietnamese NLP):** Tích hợp công cụ tách từ chuyên sâu `underthesea` trước khi lập chỉ mục sparse search, nâng cao độ chính xác khi tìm kiếm luật tiếng Việt.
 
-- **Cơ sở dữ liệu Vector:** Sử dụng ChromaDB (Hỗ trợ cả chế độ Persistent lưu trữ file cục bộ hoặc kết nối Docker Server qua HTTP Client).
+- **Listwise Reranking bằng LLM:** Sử dụng Gemini API với cấu trúc JSON output (`response_schema`) để tái xếp hạng danh sách tài liệu ứng viên từ RRF Fusion, giữ lại top 5 tài liệu liên quan nhất để đưa vào ngữ cảnh.
 
-- **LLM**: `gemini-2.5-flash`.
+- **Cơ sở dữ liệu Vector Cloud-native:** Chuyển đổi sang **Qdrant** hỗ trợ 3 chế độ chạy linh hoạt:
+  - **Qdrant Cloud:** Lưu trữ dữ liệu vĩnh viễn trên đám mây (khuyên dùng cho Production).
+  - **Qdrant Local Persistent:** Lưu trữ cục bộ tại thư mục `data/db/qdrant` giúp tránh re-embedding tốn chi phí API khi khởi chạy lại server local.
+  - **Qdrant In-Memory:** Lưu trữ tạm thời trên RAM (khi bật `QDRANT_USE_MEMORY=true`).
+
+- **LLM**: Sử dụng `gemini-3.1-flash-lite` cho các tác vụ sinh phản hồi và cô đọng câu hỏi.
 
 - **Quản lý & Lưu trữ Lịch sử Hội thoại:** Hỗ trợ lưu trữ persistent lịch sử chat nhiều phiên làm việc dưới LocalStorage, cho phép người dùng tạo mới, chuyển đổi qua lại giữa các cuộc hội thoại cũ, đổi tên trực tiếp trên sidebar, và xóa từng hội thoại (có xác nhận bảo vệ) hoặc xóa sạch toàn bộ.
 
@@ -58,19 +63,21 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật được xây dựng hoàn toà
 ![Giao diện chính](images/3.png)
 
 
-## Flow
+## Kiến trúc Hệ thống (System Architecture)
 
 ```mermaid
 graph TD
-    A[User Query & History] --> B[Step 0: Query Condensation <br/> gemini-3.1-flash-lite]
-    B -->|Condensed Query| C1[Step 1: Dense Search <br/> gemini-embedding-2 & ChromaDB]
-    B -->|Condensed Query| C2[Step 2: Sparse Search <br/> BM25 Okapi]
-    C1 -->|Dense Results| D[Step 3: Reciprocal Rank Fusion <br/> RRF Score Calculation]
-    C2 -->|Sparse Results| D
-    D -->|Top N Chunks| E[Step 4: Prompt Formulation <br/> Context + History + Query]
-    E --> F[Step 5: LLM Generation <br/> gemini-3.1-flash-lite]
-    F --> G[Step 6: Post-processing <br/> Fallback Check & Source Cleanup]
-    G --> H[Final QueryResponse]
+    A[Câu hỏi & Lịch sử trò chuyện] --> B[Cô đọng câu hỏi <br/> gemini-3.1-flash-lite]
+    B -->|Câu hỏi đã rút gọn| C[Tách từ tiếng Việt <br/> underthesea]
+    C --> C1[Tạo Vector Dense <br/> gemini-embedding-2]
+    C --> C2[Tạo Vector Sparse <br/> FastEmbed Qdrant/bm25]
+    C1 -->|Dense Vector| D[Truy vấn Hybrid trên Qdrant <br/> Cloud / Local / RAM]
+    C2 -->|Sparse Vector| D
+    D -->|Top 20 kết quả kết hợp| E[Reciprocal Rank Fusion <br/> RRF Fusion]
+    E -->|Mảng ứng viên| F[Tái xếp hạng Listwise Rerank <br/> Gemini Structured Output]
+    F -->|Top 5 văn bản tốt nhất| G[Thiết lập Prompt ngữ cảnh <br/> Context + History + Query]
+    G --> H[Mô hình Sinh phản hồi <br/> gemini-3.1-flash-lite]
+    H --> I[Hậu xử lý & Trả về kết quả]
 ```
 
 
@@ -83,14 +90,14 @@ Law-RAG/
 │       ├── api/
 │       │   └── routes.py         # Định nghĩa API
 │       ├── services/
-│       │   ├── gemini_service.py # Gọi API Gemini
+│       │   ├── gemini_service.py # Gọi API Gemini (Embedding, Generation, Reranking)
 │       │   └── rag_service.py    # Điều phối luồng RAG pipeline
 │       ├── retrieval/
-│       │   ├── dense.py          # Tìm kiếm vector trực tiếp trên ChromaDB
-│       │   ├── sparse.py         # Tìm kiếm BM25 tiếng Việt
+│       │   ├── dense.py          # Tìm kiếm Dense trực tiếp trên Qdrant
+│       │   ├── sparse.py         # Tìm kiếm Sparse trực tiếp trên Qdrant
 │       │   └── fusion.py         # Thuật toán Reciprocal Rank Fusion (RRF)
 │       ├── database/
-│       │   └── vector_db.py      # Quản lý kết nối và thao tác với ChromaDB
+│       │   └── vector_db.py      # Quản lý kết nối và thao tác với Qdrant (Cloud/Local)
 │       ├── models/
 │       │   └── schema.py         # Pydantic models xác thực dữ liệu API
 │       ├── config.py             # Cấu hình biến môi trường & Siêu tham số
@@ -100,7 +107,8 @@ Law-RAG/
 │   └── ...                       # Các component khác
 ├── data/
 │   ├── input/                    # Thư mục chứa dữ liệu JSON đầu vào
-│   └── chroma/                   # Lưu trữ CSDL ChromaDB cục bộ (chế độ Persistent)
+│   └── db/
+│       └── qdrant/               # Lưu trữ CSDL Qdrant cục bộ (Persistent fallback)
 ├── requirements.txt              # Thư viện phụ thuộc
 └── README.md                     # Hướng dẫn sử dụng
 ```
@@ -246,3 +254,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.3.2 (03/08/2026): Tối ưu hóa truy vấn cơ sở dữ liệu (tính toán kích thước collection thay vì deserialize toàn bộ), chuyển toàn bộ inline CSS sang tệp CSS riêng và dọn dẹp các ghi chú/mã code thừa. Bổ sung latency và token usage cho mỗi response.  
 
 - v2.4.0 (04/08/2026): Triển khai cơ chế lưu trữ lịch sử hội thoại nhiều phiên làm việc (multi-conversation history) persistent dưới LocalStorage trình duyệt. Hỗ trợ tạo cuộc chat mới, chọn cuộc trò chuyện cũ, đổi tên trực tiếp và xóa phiên chat với hộp thoại xác nhận.
+
+- v2.5.0 (13/08/2026): Nâng cấp kiến trúc lên Cloud-native với Qdrant (hỗ trợ Cloud/Local Persistent/In-memory). Tích hợp Sparse Search trực tiếp trên Qdrant sử dụng FastEmbed, công cụ tách từ tiếng Việt underthesea, và bộ tái xếp hạng Listwise Reranking sử dụng Gemini API.

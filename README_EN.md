@@ -26,19 +26,24 @@
 
 ---
 
->[!NOTE] Current Version: v2.4.0 (04/08/2026)
+>[!NOTE] Current Version: v3.0.0 (13/08/2026)
 
-The Legal Document Question-Answering System is built entirely in Python, using BM25 combined with Google Gemini Embedding for search retrieval, and Google Gemini for answer generation.
+The Legal Document Question-Answering System (Legal RAG) is built entirely in Python, utilizing Hybrid Search (Dense & Sparse) on top of **Qdrant**, Vietnamese word segmentation using **underthesea**, **Listwise Reranking** using Gemini, and generating precise answers with Google Gemini 3.1 Flash.
 
 ## Key Features
 
 - **Hybrid Search:**
-  - **Dense search:** `gemini-embedding-2` + `cosine similarity`.
-  - **Sparse search:** `BM25` (optimized for Vietnamese).
+  - **Dense search:** Semantic search using `gemini-embedding-2` + `cosine similarity`.
+  - **Sparse search:** Native Qdrant sparse index using `FastEmbed` (`Qdrant/bm25`).
 
-- **Reciprocal Rank Fusion (RRF):** Merges and optimizes rankings from Dense and Sparse searches.
+- **Vietnamese Tokenization:** Integrated `underthesea` for Vietnamese word segmentation before sparse indexing, maximizing search accuracy for legal texts.
 
-- **Vector Database:** Powered by ChromaDB (supports local Persistent directory storage or HTTP connection to Docker/remote server).
+- **Listwise Reranking:** Leverages the Gemini API with structured JSON output schema to rerank candidate documents from RRF fusion, selecting the top 5 most relevant context chunks.
+
+- **Cloud-Native Vector DB:** Switched to **Qdrant** supporting 3 run modes:
+  - **Qdrant Cloud:** Persistent remote storage (recommended for Production).
+  - **Qdrant Local Persistent:** Local disk storage under `data/db/qdrant` to avoid re-embedding and save Gemini API tokens on server restarts.
+  - **Qdrant In-Memory:** Ephemeral RAM storage (when `QDRANT_USE_MEMORY=true` is set).
 
 - **LLM**: Google Gemini (`gemini-3.1-flash-lite` / `gemini-2.5-flash`).
 
@@ -60,19 +65,21 @@ The Legal Document Question-Answering System is built entirely in Python, using 
 ![Citations and Sources](images/3.png)
 
 
-## Flow
+## System Architecture
 
 ```mermaid
 graph TD
-    A[User Query & History] --> B[Step 0: Query Condensation <br/> gemini-3.1-flash-lite]
-    B -->|Condensed Query| C1[Step 1: Dense Search <br/> gemini-embedding-2 & ChromaDB]
-    B -->|Condensed Query| C2[Step 2: Sparse Search <br/> BM25 Okapi]
-    C1 -->|Dense Results| D[Step 3: Reciprocal Rank Fusion <br/> RRF Score Calculation]
-    C2 -->|Sparse Results| D
-    D -->|Top N Chunks| E[Step 4: Prompt Formulation <br/> Context + History + Query]
-    E --> F[Step 5: LLM Generation <br/> gemini-3.1-flash-lite]
-    F --> G[Step 6: Post-processing <br/> Fallback Check & Source Cleanup]
-    G --> H[Final QueryResponse]
+    A[User Query & History] --> B[Query Condensation <br/> gemini-3.1-flash-lite]
+    B -->|Condensed Query| C[Vietnamese Word Segmentation <br/> underthesea]
+    C --> C1[Generate Dense Vector <br/> gemini-embedding-2]
+    C --> C2[Generate Sparse Vector <br/> FastEmbed Qdrant/bm25]
+    C1 -->|Dense Vector| D[Qdrant Hybrid Search Query <br/> Cloud / Local / RAM]
+    C2 -->|Sparse Vector| D
+    D -->|Top 20 Retracted Chunks| E[Reciprocal Rank Fusion <br/> RRF Fusion]
+    E -->|Merged Candidates| F[Listwise Rerank <br/> Gemini Structured Output]
+    F -->|Top 5 Context Chunks| G[Prompt Formulation <br/> Context + History + Query]
+    G --> H[LLM Generation <br/> gemini-3.1-flash-lite]
+    H --> I[Post-processing & Output]
 ```
 
 ## Folder Structure
@@ -84,14 +91,14 @@ Law-RAG/
 │       ├── api/
 │       │   └── routes.py         # API endpoints definitions
 │       ├── services/
-│       │   ├── gemini_service.py # Gemini API clients integration
+│       │   ├── gemini_service.py # Gemini API clients (Embedding, Generation, Reranking)
 │       │   └── rag_service.py    # Main pipeline and coordination
 │       ├── retrieval/
-│       │   ├── dense.py          # Dense similarity search via ChromaDB
-│       │   ├── sparse.py         # Sparse BM25 keyword search
+│       │   ├── dense.py          # Dense similarity search via Qdrant
+│       │   ├── sparse.py         # Sparse search via Qdrant
 │       │   └── fusion.py         # Reciprocal Rank Fusion (RRF) implementation
 │       ├── database/
-│       │   └── vector_db.py      # ChromaDB database client wrappers
+│       │   └── vector_db.py      # Qdrant database client wrappers (Cloud/Local)
 │       ├── models/
 │       │   └── schema.py         # Pydantic models for request validation
 │       ├── config.py             # System configurations and hyperparameters
@@ -103,7 +110,8 @@ Law-RAG/
 │       └── index.css             # Main styling stylesheet
 ├── data/
 │   ├── input/                    # Raw JSON corpus input directory
-│   └── chroma/                   # Local Chroma DB persistent storage directory
+│   └── db/
+│       └── qdrant/               # Local Qdrant DB persistent storage directory
 ├── requirements.txt              # Backend dependencies
 └── README.md                     # Vietnamese guide
 ```
@@ -250,3 +258,5 @@ The JSON file must be a JSON array of objects, with each object structured as fo
 - v2.3.2 (03/08/2026): Optimized database collection size calculations (using metadata counts instead of retrieving all chunks on search queries), migrated React inline styles to stylesheet classes, and removed redundant/commented code snippets. Added latency and token usage for each response.  
 
 - v2.4.0 (04/08/2026): Implemented persistent multi-session conversation history using browser LocalStorage. Supported creating new sessions, switching conversations, inline renaming, and deletion actions with confirmation alerts.
+
+- v2.5.0 (13/08/2026): Upgraded RAG architecture to Cloud-native using Qdrant (supporting Cloud/Local Persistent/In-memory modes). Integrated Qdrant-native sparse index via FastEmbed, underthesea tokenizer for Vietnamese word segmentation, and listwise reranking layer via Gemini API.

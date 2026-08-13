@@ -181,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-section">
         <div className="sidebar-header">Nhập Tài Liệu Pháp Lý</div>
         <p className="sidebar-desc">
-          Embedding tài liệu pháp lý thành Vector và lưu vào ChromaDB.
+          Embedding tài liệu pháp lý thành Vector và lưu vào Qdrant.
         </p>
 
         {/* Custom JSON Upload */}

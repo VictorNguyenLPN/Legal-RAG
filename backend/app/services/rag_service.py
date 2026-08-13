@@ -96,7 +96,7 @@ class RAGService:
             condensed, usage_metadata = gemini_service.generate_answer(prompt=prompt)
             condensed_clean = condensed.strip()
             if condensed_clean:
-                logger.info(f"Condensed query: '{user_query}' -> '{condensed_clean}'")
+                # logger.info(f"Condensed query: '{user_query}' -> '{condensed_clean}'")
                 return condensed_clean, usage_metadata
         except Exception as e:
             logger.error(f"Error in query condensation: {e}")
@@ -125,20 +125,34 @@ class RAGService:
                 response_tokens += condense_metadata.candidates_token_count or 0
                 total_tokens += condense_metadata.total_token_count or 0
 
-        # 1. Dense Search
+        # 1. Dense Search - retrieve a broader pool for reranking
         query_vector = gemini_service.get_embedding(search_query)
-        dense_results = dense_search(query_vector, top_k=settings.DENSE_TOP_K)
+        dense_results = dense_search(query_vector, top_k=20)
 
-        # 2. Sparse Search
-        sparse_results = sparse_search.search(search_query, top_k=settings.SPARSE_TOP_K)
+        # 2. Sparse Search - retrieve a broader pool for reranking
+        sparse_results = sparse_search.search(search_query, top_k=20)
 
-        # 3. Reciprocal Rank Fusion (RRF)
-        fused_results = reciprocal_rank_fusion(
+        # 3. Reciprocal Rank Fusion (RRF) - merge into a candidate pool
+        fused_candidates = reciprocal_rank_fusion(
             dense_results, 
             sparse_results, 
-            top_n=settings.RRF_TOP_N,
+            top_n=15,
             k=settings.RRF_K
         )
+
+        # 3b. Gemini Listwise Reranking - rank the candidates and choose top RRF_TOP_N
+        candidates = [chunk for chunk, score in fused_candidates]
+        reranked_ids = gemini_service.rerank(search_query, candidates, top_n=settings.RRF_TOP_N)
+        
+        # Map IDs back to chunks and assign scores based on new rank
+        fused_results = []
+        candidate_map = {c["chunk_id"]: c for c in candidates}
+        for idx, cid in enumerate(reranked_ids):
+            if cid in candidate_map:
+                # Mock score decreasing with rank
+                score = 1.0 - (idx * 0.05)
+                fused_results.append((candidate_map[cid], score))
+
 
         # 4. Construct context text for prompt
         contexts_text_list = []
@@ -208,7 +222,7 @@ class RAGService:
             response_tokens += answer_metadata.candidates_token_count or 0
             total_tokens += answer_metadata.total_token_count or 0
 
-        print(answer)
+        # print(answer)
 
         # Clear sources if the LLM states it cannot find the relevant information,
         # or if the response is purely conversational and contains no legal citations.

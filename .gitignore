@@ -2,3 +2,5 @@
 __pycache__/
 .venv/
 corpus_0.json
+corpus_1.json
+.ipynb

@@ -4,7 +4,7 @@ from backend.app.config import settings
 
 def dense_search(query_vector: List[float], top_k: int = None) -> List[Tuple[Dict, float]]:
     """
-    Performs dense search by querying ChromaDB directly.
+    Performs dense search by querying Qdrant directly.
     Returns a list of tuples containing (chunk, cosine_similarity_score).
     """
     if top_k is None:
