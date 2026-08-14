@@ -76,6 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (ingesting) {
       return { dotClass: 'ingesting', text: 'Đang xử lý...' };
     }
+    if (loadingStatus) {
+      return { dotClass: 'ingesting', text: 'Đang kết nối...' };
+    }
     return { dotClass: 'inactive', text: 'Disconnected' };
   };
 
@@ -88,6 +91,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return { dotClass: 'active', text: `${dbStatus.chunk_count} Chunks` };
       }
       return { dotClass: 'inactive', text: 'No Data' };
+    }
+    if (loadingStatus) {
+      return { dotClass: 'ingesting', text: 'Đang kết nối...' };
     }
     return { dotClass: 'inactive', text: 'Disconnected' };
   };

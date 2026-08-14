@@ -667,8 +667,8 @@ body {
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-navy);
-  margin-top: 2.5rem;
-  margin-bottom: 1.25rem;
+  /* margin-top: 2.5rem; */
+  /* margin-bottom: 1.25rem; */
 }
 
 .accordion-list {
@@ -834,7 +834,7 @@ body {
   margin-bottom: 1rem;
   max-height: none;
   flex-grow: 1;
-  padding: 4rem 20rem;
+  padding: 4rem 25rem;
   border-radius: 12px;
   background-color: transparent;
   border: none;
@@ -923,7 +923,7 @@ body {
   gap: 12px;
   align-items: center;
   margin-top: 0.75rem;
-  padding-top: 0.5rem;
+  padding-top: 1.25rem;
   border-top: 1px dashed rgba(15, 30, 54, 0.08);
   font-size: 0.8rem;
   color: var(--color-text-muted);
@@ -944,7 +944,7 @@ body {
   background-color: rgba(197, 168, 128, 0.08);
   border-color: rgba(197, 168, 128, 0.15);
   color: #8F7655;
-  font-weight: 600;
+  /* font-weight: 600; */
 }
 
 .chat-metadata-item.total {
@@ -953,9 +953,8 @@ body {
 
 .chat-sources-wrapper {
   width: 100%;
-  margin-top: 1rem;
-  border-top: 1px solid rgba(15, 30, 54, 0.05);
-  padding-top: 1rem;
+  /* border-top: 1px solid rgba(15, 30, 54, 0.05); */
+  /* padding-top: 1rem; */
 }
 
 /* ELEGANT EXTRACTED CLASSES FOR APP & SIDEBAR INLINE STYLES */

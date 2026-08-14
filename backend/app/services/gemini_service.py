@@ -42,52 +42,6 @@ class GeminiService:
             logger.error(f"Error getting embedding from Gemini API: {e}")
             raise e
 
-    def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
-        """
-        Generates embeddings for a list of text strings using parallel single-item calls.
-        This avoids the BatchEmbedContents 401 authentication bug and 
-        the gemini-embedding-2 multi-part aggregation issue.
-        """
-        from concurrent.futures import ThreadPoolExecutor
-        import time
-
-        if not self.client:
-            raise ValueError("Gemini API Client is not initialized. Please configure GEMINI_API_KEY.")
-
-        def get_single_embedding_with_retry(text: str) -> List[float]:
-            max_retries = 5
-            backoff = 2.0
-            for retry in range(max_retries):
-                try:
-                    response = self.client.models.embed_content(
-                        model=settings.EMBEDDING_MODEL,
-                        contents=text,
-                    )
-                    if response.embeddings:
-                        return response.embeddings[0].values
-                    elif hasattr(response, "embedding") and response.embedding:
-                        return response.embedding.values
-                    else:
-                        raise ValueError("No embedding returned in Gemini API response.")
-                except APIError as e:
-                    # 429 is Rate Limit / Resource Exhausted
-                    if getattr(e, "code", None) == 429 or "exhausted" in str(e).lower():
-                        if retry < max_retries - 1:
-                            logger.warning(f"Rate limit hit. Retrying in {backoff}s... (Retry {retry + 1}/{max_retries})")
-                            time.sleep(backoff)
-                            backoff *= 2.0
-                            continue
-                    logger.error(f"Error getting single embedding: {e}")
-                    raise e
-            raise ValueError("Failed to retrieve embedding after maximum retries.")
-
-        logger.info(f"Generating embeddings for {len(texts)} texts in parallel...")
-        # Using 10 workers to keep it fast but avoid overwhelming the rate limits
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            embeddings = list(executor.map(get_single_embedding_with_retry, texts))
-            
-        return embeddings
-
     def generate_answer(self, prompt: str, system_instruction: Optional[str] = None) -> Tuple[str, Optional[types.UsageMetadata]]:
         """
         Generates answer using Gemini 2.5 Flash and returns the text response and token usage metadata.
@@ -102,9 +56,9 @@ class GeminiService:
             if system_instruction:
                 config.system_instruction = system_instruction
 
-            response = self.client.models.generate_content(
-                model=settings.GENERATION_MODEL,
-                contents=prompt,
+            chat = self.client.chats.create(model=settings.GENERATION_MODEL)
+            response = chat.send_message(
+                message=prompt,
                 config=config,
             )
 
@@ -166,9 +120,9 @@ class GeminiService:
                 response_mime_type="application/json",
                 response_schema=RerankedList,
             )
-            response = self.client.models.generate_content(
-                model=settings.GENERATION_MODEL,
-                contents=prompt,
+            chat = self.client.chats.create(model=settings.GENERATION_MODEL)
+            response = chat.send_message(
+                message=prompt,
                 config=config,
             )
             
@@ -178,7 +132,7 @@ class GeminiService:
                 ranked_ids = [item.chunk_id for item in parsed_result.ranked_results]
                 # Filter out any IDs that might not be in the original candidates
                 valid_ids = [cid for cid in ranked_ids if any(c["chunk_id"] == cid for c in candidates)]
-                logger.info(f"Gemini Reranker ranked IDs: {valid_ids}")
+                # logger.info(f"Gemini Reranker ranked IDs: {valid_ids}")
                 return valid_ids
         except Exception as e:
             logger.error(f"Error in Gemini Listwise Reranking: {e}")

@@ -24,9 +24,9 @@
 
 ---
 
->[!NOTE] Phiên bản hiện tại: v3.0.0 (13/08/2026)
+>[!NOTE] Phiên bản hiện tại: v2.6.0 (14/08/2026)
 
-Hệ thống Hỏi Đáp Văn Bản Pháp Luật (Legal RAG) được xây dựng hoàn toàn bằng Python, tích hợp tìm kiếm kết hợp Hybrid Search (Dense & Sparse) trên nền tảng **Qdrant**, sử dụng bộ tách từ tiếng Việt **underthesea**, kết hợp **Listwise Reranking** bằng Gemini và sinh câu trả lời bằng Google Gemini 3.1 Flash.
+Hệ thống Hỏi Đáp Văn Bản Pháp Luật (Legal RAG) được xây dựng hoàn toàn bằng Python, tích hợp tìm kiếm kết hợp Hybrid Search (Dense & Sparse) trên nền tảng **Qdrant**, sử dụng bộ tách từ tiếng Việt **underthesea**, kết hợp **Listwise Reranking** bằng Gemini và sinh câu trả lời bằng Google Gemini.
 
 ## Tính năng nổi bật
 
@@ -256,3 +256,12 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
 - v2.4.0 (04/08/2026): Triển khai cơ chế lưu trữ lịch sử hội thoại nhiều phiên làm việc (multi-conversation history) persistent dưới LocalStorage trình duyệt. Hỗ trợ tạo cuộc chat mới, chọn cuộc trò chuyện cũ, đổi tên trực tiếp và xóa phiên chat với hộp thoại xác nhận.
 
 - v2.5.0 (13/08/2026): Nâng cấp kiến trúc lên Cloud-native với Qdrant (hỗ trợ Cloud/Local Persistent/In-memory). Tích hợp Sparse Search trực tiếp trên Qdrant sử dụng FastEmbed, công cụ tách từ tiếng Việt underthesea, và bộ tái xếp hạng Listwise Reranking sử dụng Gemini API.
+
+- v2.6.0 (14/08/2026):
+  - Đồng bộ hóa hệ thống log có màu (Colorized) thống nhất với Uvicorn. Tích hợp Live Timer đo đạc thời gian thực thi của từng giai đoạn RAG trên giao diện và hiển thị thông tin metadata hiệu năng (latency, token usage) cho từng câu trả lời.
+  - Tối ưu hóa sâu hiệu năng và độ tin cậy của Backend Cloud.
+  - Tối ưu hóa endpoint `/status` chạy đếm bản ghi trực tiếp (`len(vector_db)`) thay vì tải toàn bộ chunks, cải thiện tốc độ từ hàng giây xuống dưới 5ms, giải quyết dứt điểm hiện tượng UI chớp nháy và mất kết nối.
+  - Thiết lập cơ chế Tự phục hồi dữ liệu (Self-Healing Ingestion) lúc khởi động: Tự động phát hiện và nạp lại sạch sẽ nếu bộ sưu tập trên Qdrant Cloud bị khuyết dữ liệu.
+  - Khắc phục lỗi `read operation timed out` khi nạp dữ liệu lên Qdrant Cloud bằng cách tăng timeout mạng lên 120s và điều chỉnh kích thước batch tự động.
+  - Chuyển đổi toàn bộ các hàm sinh nội dung và Reranking của Gemini sang đối tượng Chat tương thích chuẩn xác với cơ chế Automatic Function Calling (AFC) của Google GenAI SDK mới nhất, xóa sạch hoàn toàn cảnh báo warning trong log.
+  - Cải tiến UI: Thêm trạng thái trung gian "Đang kết nối..." màu vàng lúc tải trang, tích hợp hiển thị thời gian phản hồi trực quan ngay cạnh nhãn trạng thái sinh câu hỏi "Answering...".
