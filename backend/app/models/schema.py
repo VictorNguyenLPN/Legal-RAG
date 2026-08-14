@@ -55,7 +55,7 @@ class QueryResponse(BaseModel):
     prompt_tokens: Optional[int] = None
     response_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
-    response_time: Optional[float] = None
+    timing_details: Optional[Dict[str, float]] = None
 
 class IngestResponse(BaseModel):
     status: str

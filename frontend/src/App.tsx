@@ -17,7 +17,7 @@ interface ChatMessage {
   promptTokens?: number;
   responseTokens?: number;
   totalTokens?: number;
-  responseTime?: number;
+  timingDetails?: Record<string, number>;
 }
 
 interface Conversation {
@@ -34,7 +34,7 @@ interface Toast {
 
 function App() {
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
-  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
   const [ingesting, setIngesting] = useState(false);
   
   // Conversations list synced with LocalStorage
@@ -53,6 +53,8 @@ function App() {
   });
 
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const [searchPhase, setSearchPhase] = useState<string>('Answering...');
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -90,6 +92,22 @@ function App() {
     }
   }, [toast]);
 
+  // Live Timer for Search Progress
+  useEffect(() => {
+    let timer: any;
+    if (loadingSearch) {
+      const startTime = Date.now();
+      setSearchPhase('Answering...');
+      timer = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        setElapsedTime(elapsed);
+      }, 100);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [loadingSearch]);
+
   // Fetch Database Status
   const fetchStatus = async (showLoading = false) => {
     if (showLoading) setLoadingStatus(true);
@@ -104,7 +122,7 @@ function App() {
     } catch (err) {
       setDbStatus(null);
     } finally {
-      if (showLoading) setLoadingStatus(false);
+      setLoadingStatus(false);
     }
   };
 
@@ -198,6 +216,8 @@ function App() {
     }
 
     setLoadingSearch(true);
+    setSearchPhase('Đang nhúng câu truy vấn (Embedding query)...');
+    setElapsedTime(0);
 
     try {
       const controller = new AbortController();
@@ -225,7 +245,7 @@ function App() {
           promptTokens: data.prompt_tokens,
           responseTokens: data.response_tokens,
           totalTokens: data.total_tokens,
-          responseTime: data.response_time
+          timingDetails: data.timing_details
         };
         setConversations((prev) =>
           prev.map((c) => {
@@ -371,26 +391,16 @@ function App() {
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
 
                         {/* Token usage and response time metadata */}
-                        {(msg.responseTime !== undefined || msg.promptTokens !== undefined || msg.responseTokens !== undefined) && (
+                        {(msg.timingDetails !== undefined || msg.promptTokens !== undefined || msg.responseTokens !== undefined) && (
                           <div className="chat-metadata-bar">
-                            {msg.responseTime !== undefined && (
-                              <span className="chat-metadata-item time">
-                                {msg.responseTime}s
+                            {msg.timingDetails && (
+                              <span className="chat-metadata-item" style={{ color: '#475569', fontSize: '0.75rem' }}>
+                                Emb & Ret: {msg.timingDetails.search}s | Rerank: {msg.timingDetails.rerank}s | LLM: {msg.timingDetails.llm}s | Total: {msg.timingDetails['total_time']}s
                               </span>
-                            )}
+                            )}                            
                             {msg.promptTokens !== undefined && (
                               <span className="chat-metadata-item">
-                                Prompt: {msg.promptTokens} tokens
-                              </span>
-                            )}
-                            {msg.responseTokens !== undefined && (
-                              <span className="chat-metadata-item">
-                                Response: {msg.responseTokens} tokens
-                              </span>
-                            )}
-                            {msg.totalTokens !== undefined && (
-                              <span className="chat-metadata-item total">
-                                Total: {msg.totalTokens} tokens
+                                Prompt: {msg.promptTokens} tokens | Response: {msg.responseTokens} tokens | Total: {msg.totalTokens} tokens
                               </span>
                             )}
                           </div>
@@ -409,11 +419,13 @@ function App() {
 
               {loadingSearch && (
                 <div className="chat-message-item assistant">
-                  <div className="chat-bubble assistant chat-bubble-thinking">
-                    <div className="spinner spinner-small"></div>
-                    <span className="thinking-text">
-                      Đang suy nghĩ ...
-                    </span>
+                  <div className="chat-bubble assistant chat-bubble-thinking" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', minWidth: '280px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="spinner spinner-small"></div>
+                      <span className="thinking-text" style={{ fontWeight: '600', color: '#1e293b' }}>
+                        {searchPhase} ({elapsedTime.toFixed(1)}s)
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

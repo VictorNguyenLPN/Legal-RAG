@@ -51,20 +51,12 @@ class RAGService:
         if not chunks:
             return 0
         
-        # Limit to 100 chunks for demo purposes
-        chunks = chunks[:100]
+        # chunks = chunks[:100]
         
         logger.info(f"Ingesting {len(chunks)} chunks...")
         
-        # 1. Format texts for embedding
-        embedding_texts = [self.format_embedding_text(chunk) for chunk in chunks]
-        
-        # 2. Call Gemini API to get embeddings in batch
-        embeddings_list = gemini_service.get_embeddings_batch(embedding_texts)
-        embeddings_matrix = np.array(embeddings_list, dtype=np.float32)
-        
-        # 3. Save to VectorDB (.npy and json)
-        vector_db.save(chunks, embeddings_matrix)
+        # 2. Save to VectorDB (will generate embeddings automatically via Qdrant/local FastEmbed)
+        vector_db.save(chunks)
         
         # 4. Force sparse search index rebuild
         sparse_search.initialize()
@@ -112,11 +104,14 @@ class RAGService:
                 "sources": []
             }
 
+        import time
+        timing_details = {}
         prompt_tokens = 0
         response_tokens = 0
         total_tokens = 0
 
         # 0. Condense query if chat history exists
+        t_condense = time.perf_counter()
         search_query = user_query
         if history:
             search_query, condense_metadata = self.condense_query(user_query, history)
@@ -124,25 +119,25 @@ class RAGService:
                 prompt_tokens += condense_metadata.prompt_token_count or 0
                 response_tokens += condense_metadata.candidates_token_count or 0
                 total_tokens += condense_metadata.total_token_count or 0
+        timing_details["condense"] = round(time.perf_counter() - t_condense, 3)
 
-        # 1. Dense Search - retrieve a broader pool for reranking
-        query_vector = gemini_service.get_embedding(search_query)
-        dense_results = dense_search(query_vector, top_k=20)
-
-        # 2. Sparse Search - retrieve a broader pool for reranking
+        # 1. Search (Dense + Sparse + RRF)
+        t_search = time.perf_counter()
+        dense_results = dense_search(search_query, top_k=20)
         sparse_results = sparse_search.search(search_query, top_k=20)
-
-        # 3. Reciprocal Rank Fusion (RRF) - merge into a candidate pool
         fused_candidates = reciprocal_rank_fusion(
             dense_results, 
             sparse_results, 
             top_n=15,
             k=settings.RRF_K
         )
+        timing_details["search"] = round(time.perf_counter() - t_search, 3)
 
         # 3b. Gemini Listwise Reranking - rank the candidates and choose top RRF_TOP_N
+        t_rerank = time.perf_counter()
         candidates = [chunk for chunk, score in fused_candidates]
         reranked_ids = gemini_service.rerank(search_query, candidates, top_n=settings.RRF_TOP_N)
+        timing_details["rerank"] = round(time.perf_counter() - t_rerank, 3)
         
         # Map IDs back to chunks and assign scores based on new rank
         fused_results = []
@@ -212,11 +207,14 @@ class RAGService:
             f"Câu hỏi tiếp theo của Người dùng: {user_query}"
         )
 
+        t_llm = time.perf_counter()
         # 7. Generate answer using Gemini 2.5 Flash
         answer, answer_metadata = gemini_service.generate_answer(
             prompt=prompt,
             system_instruction=self.SYSTEM_INSTRUCTION
         )
+        timing_details["llm"] = round(time.perf_counter() - t_llm, 3)
+        timing_details["total_time"] = round(sum(timing_details.values()), 3)
         if answer_metadata:
             prompt_tokens += answer_metadata.prompt_token_count or 0
             response_tokens += answer_metadata.candidates_token_count or 0
@@ -250,12 +248,15 @@ class RAGService:
         if any(marker in answer for marker in fallback_markers) or not has_legal_content:
             sources = []
 
+        # print(timing_details)
+
         return {
             "answer": answer,
             "sources": sources,
             "prompt_tokens": prompt_tokens if prompt_tokens > 0 else None,
             "response_tokens": response_tokens if response_tokens > 0 else None,
             "total_tokens": total_tokens if total_tokens > 0 else None,
+            "timing_details": timing_details
         }
 
 # Singleton instance of RAGService

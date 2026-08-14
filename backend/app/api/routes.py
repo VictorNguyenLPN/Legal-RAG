@@ -77,22 +77,18 @@ def query_rag(payload: QueryRequest):
         )
         
     try:
-        start_time = time.perf_counter()
         history_list = None
         if payload.history:
             history_list = [{"role": msg.role, "content": msg.content} for msg in payload.history]
         result = rag_service.query(payload.query, history_list)
-        end_time = time.perf_counter()
-        
-        response_time = round(end_time - start_time, 2)
-        
+
         return QueryResponse(
             answer=result["answer"],
             sources=result["sources"],
             prompt_tokens=result.get("prompt_tokens"),
             response_tokens=result.get("response_tokens"),
             total_tokens=result.get("total_tokens"),
-            response_time=response_time
+            timing_details=result.get("timing_details")
         )
     except Exception as e:
         raise HTTPException(
@@ -106,7 +102,7 @@ async def get_status():
     Get the initialization status of the RAG system database.
     """
     is_empty = vector_db.is_empty()
-    chunk_count = len(vector_db.chunks)
+    chunk_count = len(vector_db)
     return {
         "database_initialized": not is_empty,
         "chunk_count": chunk_count,
