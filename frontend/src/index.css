@@ -13,8 +13,8 @@
   --color-border: #E2E8F0;
   --color-success: #10B981;
   --color-danger: #EF4444;
-  --font-serif: 'Playfair Display', serif;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   --shadow-premium: 0 10px 30px -10px rgba(15, 30, 54, 0.04);
 }
@@ -356,7 +356,7 @@ body {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 1rem 1.25rem 1rem 3rem;
+  padding: 1rem 1.25rem 1rem 1.25rem;
   font-family: var(--font-sans);
   font-size: 1.05rem;
   color: var(--color-text-primary);
@@ -796,7 +796,7 @@ body {
 /* Global Custom Alert Toast styling */
 .toast-msg {
   position: fixed;
-  bottom: 2rem;
+  top: 2.5rem;
   right: 2rem;
   background-color: var(--color-navy);
   color: #FFFFFF;
@@ -834,7 +834,7 @@ body {
   margin-bottom: 1rem;
   max-height: none;
   flex-grow: 1;
-  padding: 4rem 25rem;
+  padding: 4rem 20rem;
   border-radius: 12px;
   background-color: transparent;
   border: none;

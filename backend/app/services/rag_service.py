@@ -1,6 +1,7 @@
+import time
+import re
 import logging
 from typing import List, Dict, Tuple, Any
-import numpy as np
 from backend.app.config import settings
 from backend.app.database.vector_db import vector_db
 from backend.app.services.gemini_service import gemini_service
@@ -9,6 +10,7 @@ from backend.app.retrieval.sparse import sparse_search
 from backend.app.retrieval.fusion import reciprocal_rank_fusion
 
 logger = logging.getLogger(__name__)
+
 
 class RAGService:
     SYSTEM_INSTRUCTION = (
@@ -23,18 +25,13 @@ class RAGService:
     )
 
     def format_embedding_text(self, chunk: Dict) -> str:
-        """
-        Formats raw chunk + metadata into a descriptive text representation for embedding.
-        """
         metadata = chunk.get("metadata", {})
         doc_title = metadata.get("document_title") or ""
-        
         hierarchy = metadata.get("hierarchy_path") or []
         hierarchy_str = " > ".join([str(h) for h in hierarchy if h])
-        
         article_title = metadata.get("article_title") or ""
         text = chunk.get("text") or ""
-        
+
         parts = [
             f"Văn bản: {doc_title}",
             f"Vị trí cấu trúc: {hierarchy_str}",
@@ -44,36 +41,19 @@ class RAGService:
         return "\n".join(parts)
 
     def ingest_chunks(self, chunks: List[Dict]) -> int:
-        """
-        Prepares texts, generates embeddings, and saves to vector database.
-        Returns the number of processed chunks.
-        """
         if not chunks:
             return 0
-        
-        # chunks = chunks[:100]
-        
-        logger.info(f"Ingesting {len(chunks)} chunks...")
-        
-        # 2. Save to VectorDB (will generate embeddings automatically via Qdrant/local FastEmbed)
+
         vector_db.save(chunks)
-        
-        # 4. Force sparse search index rebuild
         sparse_search.initialize()
-        
-        logger.info(f"Successfully saved {len(chunks)} chunks & embeddings.")
         return len(chunks)
 
     def condense_query(self, user_query: str, history: List[Dict[str, str]]) -> Tuple[str, Any]:
-        """
-        Condenses a user's follow-up query with the conversation history into a standalone query.
-        Returns a tuple of (condensed_query, usage_metadata).
-        """
         history_str = ""
         for msg in history:
             role_label = "Người dùng" if msg["role"] == "user" else "Trợ lý AI"
             history_str += f"{role_label}: {msg['content']}\n"
-            
+
         prompt = (
             "Dựa vào lịch sử hội thoại pháp lý dưới đây và câu hỏi mới nhất của người dùng, "
             "hãy viết lại câu hỏi mới này thành một câu hỏi độc lập (standalone question) bằng tiếng Việt, "
@@ -88,71 +68,61 @@ class RAGService:
             condensed, usage_metadata = gemini_service.generate_answer(prompt=prompt)
             condensed_clean = condensed.strip()
             if condensed_clean:
-                # logger.info(f"Condensed query: '{user_query}' -> '{condensed_clean}'")
                 return condensed_clean, usage_metadata
         except Exception as e:
-            logger.error(f"Error in query condensation: {e}")
+            logger.error(f"Failed to condense query: {e}")
         return user_query, None
 
     def query(self, user_query: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
-        """
-        Full hybrid search + generation pipeline with history support.
-        """
         if vector_db.is_empty():
             return {
                 "answer": "Cơ sở dữ liệu pháp luật hiện đang trống. Vui lòng thực hiện ingest dữ liệu trước.",
                 "sources": []
             }
 
-        import time
         timing_details = {}
-        prompt_tokens = 0
-        response_tokens = 0
-        total_tokens = 0
+        token_details = {
+            "prompt_tokens": 0,
+            "response_tokens": 0,
+            "total_tokens": 0
+        }
 
-        # 0. Condense query if chat history exists
         t_condense = time.perf_counter()
         search_query = user_query
         if history:
             search_query, condense_metadata = self.condense_query(user_query, history)
             if condense_metadata:
-                prompt_tokens += condense_metadata.prompt_token_count or 0
-                response_tokens += condense_metadata.candidates_token_count or 0
-                total_tokens += condense_metadata.total_token_count or 0
+                token_details['prompt_tokens'] += condense_metadata.prompt_token_count or 0
+                token_details['response_tokens'] += condense_metadata.candidates_token_count or 0
+                token_details['total_tokens'] += condense_metadata.total_token_count or 0
         timing_details["condense"] = round(time.perf_counter() - t_condense, 3)
 
-        # 1. Search (Dense + Sparse + RRF)
         t_search = time.perf_counter()
         dense_results = dense_search(search_query, top_k=20)
         sparse_results = sparse_search.search(search_query, top_k=20)
         fused_candidates = reciprocal_rank_fusion(
-            dense_results, 
-            sparse_results, 
+            dense_results,
+            sparse_results,
             top_n=15,
             k=settings.RRF_K
         )
         timing_details["search"] = round(time.perf_counter() - t_search, 3)
 
-        # 3b. Gemini Listwise Reranking - rank the candidates and choose top RRF_TOP_N
         t_rerank = time.perf_counter()
         candidates = [chunk for chunk, score in fused_candidates]
         reranked_ids = gemini_service.rerank(search_query, candidates, top_n=settings.RRF_TOP_N)
         timing_details["rerank"] = round(time.perf_counter() - t_rerank, 3)
-        
-        # Map IDs back to chunks and assign scores based on new rank
+
         fused_results = []
         candidate_map = {c["chunk_id"]: c for c in candidates}
         for idx, cid in enumerate(reranked_ids):
             if cid in candidate_map:
-                # Mock score decreasing with rank
                 score = 1.0 - (idx * 0.05)
                 fused_results.append((candidate_map[cid], score))
 
-
-        # 4. Construct context text for prompt
         contexts_text_list = []
         sources = []
-        
+
         for idx, (chunk, score) in enumerate(fused_results):
             metadata = chunk.get("metadata", {})
             doc_title = metadata.get("document_title") or "N/A"
@@ -160,8 +130,7 @@ class RAGService:
             clause = metadata.get("clause_number") or "N/A"
             point = metadata.get("point") or ""
             text = chunk.get("text") or ""
-            
-            # Format display context
+
             context_item = (
                 f"Tài liệu [{idx + 1}]:\n"
                 f"- Tên văn bản: {doc_title}\n"
@@ -171,10 +140,9 @@ class RAGService:
             if point:
                 context_item += f"- Điểm: {point}\n"
             context_item += f"- Nội dung: {text}\n"
-            
+
             contexts_text_list.append(context_item)
-            
-            # Capture metadata details for api response
+
             sources.append({
                 "chunk_id": chunk.get("chunk_id"),
                 "document_title": doc_title,
@@ -187,8 +155,7 @@ class RAGService:
             })
 
         contexts_text = "\n\n".join(contexts_text_list)
-        
-        # 5. Build conversation history text if present
+
         history_text = ""
         if history:
             history_text = "Lịch sử cuộc hội thoại trước đó:\n"
@@ -197,7 +164,6 @@ class RAGService:
                 history_text += f"- {role_label}: {msg['content']}\n"
             history_text += "\n"
 
-        # 6. Build full prompt
         prompt = (
             f"Ngữ cảnh pháp luật được cung cấp:\n"
             f"=================================\n"
@@ -208,7 +174,6 @@ class RAGService:
         )
 
         t_llm = time.perf_counter()
-        # 7. Generate answer using Gemini 2.5 Flash
         answer, answer_metadata = gemini_service.generate_answer(
             prompt=prompt,
             system_instruction=self.SYSTEM_INSTRUCTION
@@ -216,48 +181,35 @@ class RAGService:
         timing_details["llm"] = round(time.perf_counter() - t_llm, 3)
         timing_details["total_time"] = round(sum(timing_details.values()), 3)
         if answer_metadata:
-            prompt_tokens += answer_metadata.prompt_token_count or 0
-            response_tokens += answer_metadata.candidates_token_count or 0
-            total_tokens += answer_metadata.total_token_count or 0
+            token_details['prompt_tokens'] += answer_metadata.prompt_token_count or 0
+            token_details['response_tokens'] += answer_metadata.candidates_token_count or 0
+            token_details['total_tokens'] += answer_metadata.total_token_count or 0
 
-        # print(answer)
-
-        # Clear sources if the LLM states it cannot find the relevant information,
-        # or if the response is purely conversational and contains no legal citations.
         fallback_markers = [
             "Tôi không tìm thấy thông tin phù hợp",
             "không tìm thấy thông tin phù hợp",
             "không có thông tin phù hợp"
         ]
-        
-        import re
+
         has_legal_content = False
-        
-        # 1. Capitalized Điều or Khoản followed by a number (e.g., Điều 168, Khoản 2)
         if re.search(r"(Điều|Khoản)\s+\d+", answer):
             has_legal_content = True
-        # 2. Parenthesized citation containing legal keywords
         elif re.search(r"\(([^)]*(Điều|Khoản|Bộ luật|Luật|Quyết định|Thông tư|Nghị định)[^)]*)\)", answer):
             has_legal_content = True
-        # 3. Capitalized document type keywords (case-sensitive)
         else:
             capital_keywords = ["Bộ luật", "Quyết định", "Thông tư", "Nghị định", "Hiến pháp"]
             if any(kw in answer for kw in capital_keywords):
                 has_legal_content = True
-                
+
         if any(marker in answer for marker in fallback_markers) or not has_legal_content:
             sources = []
-
-        # print(timing_details)
-
+        print(token_details)
         return {
             "answer": answer,
             "sources": sources,
-            "prompt_tokens": prompt_tokens if prompt_tokens > 0 else None,
-            "response_tokens": response_tokens if response_tokens > 0 else None,
-            "total_tokens": total_tokens if total_tokens > 0 else None,
+            "token_details": token_details,
             "timing_details": timing_details
         }
 
-# Singleton instance of RAGService
+
 rag_service = RAGService()

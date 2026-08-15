@@ -260,3 +260,14 @@ The JSON file must be a JSON array of objects, with each object structured as fo
 - v2.4.0 (04/08/2026): Implemented persistent multi-session conversation history using browser LocalStorage. Supported creating new sessions, switching conversations, inline renaming, and deletion actions with confirmation alerts.
 
 - v2.5.0 (13/08/2026): Upgraded RAG architecture to Cloud-native using Qdrant (supporting Cloud/Local Persistent/In-memory modes). Integrated Qdrant-native sparse index via FastEmbed, underthesea tokenizer for Vietnamese word segmentation, and listwise reranking layer via Gemini API.
+
+- v2.6.0 (August 14, 2026): 
+  - Synchronize the colorized log system with Uvicorn. Live Timer integration measures the execution time of each RAG phase on the interface and displays performance metadata information (latency, token usage) for each answer. 
+  - Deeply optimize Backend Cloud performance and reliability. 
+  - Optimized the `/status` endpoint to run record counting directly (`len(vector_db)`) instead of downloading entire chunks, improving speed from seconds to less than 5ms, completely resolving the phenomenon of UI flickering and connection loss. 
+  - Set up Self-Healing Ingestion at startup: Automatically detect and refill cleanly if the collection on Qdrant Cloud is missing data. 
+  - Fix `read operation timed out` error when uploading data to Qdrant Cloud by increasing network timeout to 120s and adjusting batch size automatically. 
+  - Convert all content generation and Reranking functions of Gemini to Chat objects that are compatible with the Automatic Function Calling (AFC) mechanism of the latest Google GenAI SDK, completely removing warnings in the log. 
+  - UI improvements: Add a yellow "Connecting..." intermediate status when loading the page, integrate a visual response time display right next to the "Answering..." question generation status label.
+
+- v2.6.1(August 15, 2026): Clean source code, remove unused components

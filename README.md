@@ -38,10 +38,7 @@ Hệ thống Hỏi Đáp Văn Bản Pháp Luật (Legal RAG) được xây dựn
 
 - **Listwise Reranking bằng LLM:** Sử dụng Gemini API với cấu trúc JSON output (`response_schema`) để tái xếp hạng danh sách tài liệu ứng viên từ RRF Fusion, giữ lại top 5 tài liệu liên quan nhất để đưa vào ngữ cảnh.
 
-- **Cơ sở dữ liệu Vector Cloud-native:** Chuyển đổi sang **Qdrant** hỗ trợ 3 chế độ chạy linh hoạt:
-  - **Qdrant Cloud:** Lưu trữ dữ liệu vĩnh viễn trên đám mây (khuyên dùng cho Production).
-  - **Qdrant Local Persistent:** Lưu trữ cục bộ tại thư mục `data/db/qdrant` giúp tránh re-embedding tốn chi phí API khi khởi chạy lại server local.
-  - **Qdrant In-Memory:** Lưu trữ tạm thời trên RAM (khi bật `QDRANT_USE_MEMORY=true`).
+- **Cơ sở dữ liệu Vector Cloud-native:** Sử dụng **Qdrant Cloud** lưu trữ dữ liệu vĩnh viễn và hỗ trợ Cloud Inference cho mô hình embedding `intfloat/multilingual-e5-small`.
 
 - **LLM**: Sử dụng `gemini-3.1-flash-lite` cho các tác vụ sinh phản hồi và cô đọng câu hỏi.
 
@@ -71,7 +68,7 @@ graph TD
     B -->|Câu hỏi đã rút gọn| C[Tách từ tiếng Việt <br/> underthesea]
     C --> C1[Tạo Vector Dense <br/> gemini-embedding-2]
     C --> C2[Tạo Vector Sparse <br/> FastEmbed Qdrant/bm25]
-    C1 -->|Dense Vector| D[Truy vấn Hybrid trên Qdrant <br/> Cloud / Local / RAM]
+    C1 -->|Dense Vector| D[Truy vấn Hybrid trên Qdrant Cloud]
     C2 -->|Sparse Vector| D
     D -->|Top 20 kết quả kết hợp| E[Reciprocal Rank Fusion <br/> RRF Fusion]
     E -->|Mảng ứng viên| F[Tái xếp hạng Listwise Rerank <br/> Gemini Structured Output]
@@ -97,7 +94,7 @@ Law-RAG/
 │       │   ├── sparse.py         # Tìm kiếm Sparse trực tiếp trên Qdrant
 │       │   └── fusion.py         # Thuật toán Reciprocal Rank Fusion (RRF)
 │       ├── database/
-│       │   └── vector_db.py      # Quản lý kết nối và thao tác với Qdrant (Cloud/Local)
+│       │   └── vector_db.py      # Quản lý kết nối và thao tác trực tiếp với Qdrant Cloud
 │       ├── models/
 │       │   └── schema.py         # Pydantic models xác thực dữ liệu API
 │       ├── config.py             # Cấu hình biến môi trường & Siêu tham số
@@ -265,3 +262,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
   - Khắc phục lỗi `read operation timed out` khi nạp dữ liệu lên Qdrant Cloud bằng cách tăng timeout mạng lên 120s và điều chỉnh kích thước batch tự động.
   - Chuyển đổi toàn bộ các hàm sinh nội dung và Reranking của Gemini sang đối tượng Chat tương thích chuẩn xác với cơ chế Automatic Function Calling (AFC) của Google GenAI SDK mới nhất, xóa sạch hoàn toàn cảnh báo warning trong log.
   - Cải tiến UI: Thêm trạng thái trung gian "Đang kết nối..." màu vàng lúc tải trang, tích hợp hiển thị thời gian phản hồi trực quan ngay cạnh nhãn trạng thái sinh câu hỏi "Answering...".
+
+- v2.6.1(15/08/2026): Clean source code, bỏ các component không sử dụng
