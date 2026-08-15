@@ -1,7 +1,7 @@
 import json
-import time
 from pathlib import Path
 from typing import List
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException, status
 from backend.app.models.schema import (
     Chunk, IngestFileRequest, IngestResponse, QueryRequest, QueryResponse
@@ -22,13 +22,13 @@ def ingest_from_body(chunks: List[Chunk]):
         count = rag_service.ingest_chunks(raw_chunks)
         return IngestResponse(
             status="success",
-            message=f"Successfully ingested {count} chunks.",
+            message=f"Ingest success: {count} chunks",
             count=count
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to ingest chunks: {str(e)}"
+            detail=f"Failed to ingest: {str(e)}"
         )
 
 @router.post("/ingest-file", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
@@ -81,13 +81,11 @@ def query_rag(payload: QueryRequest):
         if payload.history:
             history_list = [{"role": msg.role, "content": msg.content} for msg in payload.history]
         result = rag_service.query(payload.query, history_list)
-
+        
         return QueryResponse(
             answer=result["answer"],
             sources=result["sources"],
-            prompt_tokens=result.get("prompt_tokens"),
-            response_tokens=result.get("response_tokens"),
-            total_tokens=result.get("total_tokens"),
+            token_details=result.get("token_details"),
             timing_details=result.get("timing_details")
         )
     except Exception as e:

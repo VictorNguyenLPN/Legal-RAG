@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
 
 interface SearchFormProps {
   onSearch: (query: string) => void;
@@ -33,13 +32,12 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     <div className="search-container">
       <form onSubmit={handleSubmit} className="search-form">
         <div className="search-input-wrapper">
-          <Search className="search-icon" />
           <input
             type="text"
             className="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ví dụ: Mức hình phạt cao nhất cho tội vô ý làm chết người là bao nhiêu?"
+            placeholder="Ask anything"
             disabled={loading || disabled}
           />
         </div>

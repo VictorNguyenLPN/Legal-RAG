@@ -14,9 +14,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
-  promptTokens?: number;
-  responseTokens?: number;
-  totalTokens?: number;
+  tokenDetails?: Record<string, number>;
   timingDetails?: Record<string, number>;
 }
 
@@ -35,8 +33,7 @@ interface Toast {
 function App() {
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [ingesting, setIngesting] = useState(false);
-  
+
   // Conversations list synced with LocalStorage
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
@@ -140,30 +137,6 @@ function App() {
     showToast('Đang cập nhật trạng thái hệ thống...', 'info');
   };
 
-  // Ingest custom JSON file contents
-  const handleIngestCustom = async (chunks: any[]) => {
-    setIngesting(true);
-    showToast('Đang tải lên và nhúng dữ liệu...', 'info');
-    try {
-      const res = await fetch(`${API_URL}/ingest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chunks),
-      });
-      if (res.status === 201) {
-        showToast(`Lập chỉ mục thành công ${chunks.length} chunks!`, 'success');
-        fetchStatus();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        showToast(`Lỗi: ${errorData.detail || 'Không rõ'}`, 'error');
-      }
-    } catch (err) {
-      showToast('Không thể kết nối tới máy chủ để tải lên.', 'error');
-    } finally {
-      setIngesting(false);
-    }
-  };
-
   // Execute query RAG search (send chat message)
   const handleSearch = async (searchQuery: string) => {
     if (!dbStatus || !dbStatus.database_initialized) {
@@ -242,11 +215,10 @@ function App() {
           role: 'assistant',
           content: data.answer || 'Không tìm thấy câu trả lời phù hợp.',
           sources: data.sources || [],
-          promptTokens: data.prompt_tokens,
-          responseTokens: data.response_tokens,
-          totalTokens: data.total_tokens,
+          tokenDetails: data.token_details,
           timingDetails: data.timing_details
         };
+
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === targetConvId) {
@@ -359,8 +331,6 @@ function App() {
         dbStatus={dbStatus}
         loadingStatus={loadingStatus}
         onRefreshStatus={handleRefreshStatus}
-        onIngestCustom={handleIngestCustom}
-        ingesting={ingesting}
         conversations={conversations}
         activeConversationId={activeConversationId}
         onSelectConversation={handleSelectConversation}
@@ -389,22 +359,20 @@ function App() {
                     ) : (
                       <div className="legal-opinion-text legal-opinion-chat-text">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
-
-                        {/* Token usage and response time metadata */}
-                        {(msg.timingDetails !== undefined || msg.promptTokens !== undefined || msg.responseTokens !== undefined) && (
+                        <>
                           <div className="chat-metadata-bar">
                             {msg.timingDetails && (
-                              <span className="chat-metadata-item" style={{ color: '#475569', fontSize: '0.75rem' }}>
-                                Emb & Ret: {msg.timingDetails.search}s | Rerank: {msg.timingDetails.rerank}s | LLM: {msg.timingDetails.llm}s | Total: {msg.timingDetails['total_time']}s
-                              </span>
-                            )}                            
-                            {msg.promptTokens !== undefined && (
                               <span className="chat-metadata-item">
-                                Prompt: {msg.promptTokens} tokens | Response: {msg.responseTokens} tokens | Total: {msg.totalTokens} tokens
+                                Emb & Ret: {msg.timingDetails.search}s | Rerank: {msg.timingDetails.rerank}s | LLM: {msg.timingDetails.llm}s | <b>Total: {msg.timingDetails['total_time']}s</b>
+                              </span>
+                            )}
+                            {msg.tokenDetails !== undefined && (
+                              <span className="chat-metadata-item">
+                                Prompt: {msg.tokenDetails['prompt_tokens']} tokens | Response: {msg.tokenDetails['response_tokens']} tokens | <b>Total: {msg.tokenDetails['total_tokens']} tokens</b>
                               </span>
                             )}
                           </div>
-                        )}
+                        </>
 
                         {msg.sources && msg.sources.length > 0 && (
                           <div className="chat-sources-wrapper">
@@ -447,7 +415,6 @@ function App() {
       {/* Floating Toast Notification */}
       {toast && (
         <div className="toast-msg">
-          <span>⚖️</span>
           <span>{toast.message}</span>
         </div>
       )}
