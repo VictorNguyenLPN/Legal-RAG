@@ -1,10 +1,11 @@
 import time
 import re
 import logging
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional, Callable, Awaitable
 from backend.app.config import settings
 from backend.app.database.vector_db import vector_db
 from backend.app.services.gemini_service import gemini_service
+from backend.app.services.jina_service import jina_service
 from backend.app.retrieval.dense import dense_search
 from backend.app.retrieval.sparse import sparse_search
 from backend.app.retrieval.fusion import reciprocal_rank_fusion
@@ -24,28 +25,11 @@ class RAGService:
         "4. Trình bày câu trả lời rõ ràng, logic, đúng văn phong pháp lý, định dạng Markdown."
     )
 
-    def format_embedding_text(self, chunk: Dict) -> str:
-        metadata = chunk.get("metadata", {})
-        doc_title = metadata.get("document_title") or ""
-        hierarchy = metadata.get("hierarchy_path") or []
-        hierarchy_str = " > ".join([str(h) for h in hierarchy if h])
-        article_title = metadata.get("article_title") or ""
-        text = chunk.get("text") or ""
-
-        parts = [
-            f"Văn bản: {doc_title}",
-            f"Vị trí cấu trúc: {hierarchy_str}",
-            f"Tiêu đề Điều: {article_title}",
-            f"Nội dung điều khoản: {text}"
-        ]
-        return "\n".join(parts)
-
     def ingest_chunks(self, chunks: List[Dict]) -> int:
         if not chunks:
             return 0
 
         vector_db.save(chunks)
-        sparse_search.initialize()
         return len(chunks)
 
     def condense_query(self, user_query: str, history: List[Dict[str, str]]) -> Tuple[str, Any]:
@@ -55,15 +39,14 @@ class RAGService:
             history_str += f"{role_label}: {msg['content']}\n"
 
         prompt = (
-            "Dựa vào lịch sử hội thoại pháp lý dưới đây và câu hỏi mới nhất của người dùng, "
-            "hãy viết lại câu hỏi mới này thành một câu hỏi độc lập (standalone question) bằng tiếng Việt, "
-            "đầy đủ ngữ cảnh để có thể dùng tìm kiếm trực tiếp trong cơ sở dữ liệu pháp luật. "
-            "Không tự trả lời câu hỏi, không thêm bất kỳ văn bản giải thích hoặc dẫn nhập nào, "
-            "chỉ trả về duy nhất câu hỏi đã được viết lại.\n\n"
-            f"Lịch sử hội thoại:\n{history_str}\n"
-            f"Câu hỏi mới nhất: {user_query}\n\n"
-            "Câu hỏi độc lập:"
+            f"Dưới đây là Lịch sử cuộc hội thoại giữa Người dùng và Trợ lý AI:\n"
+            f"{history_str}\n"
+            f"Hãy diễn giải lại câu hỏi mới nhất dưới đây của Người dùng thành một câu hỏi độc lập, "
+            f"đầy đủ bối cảnh nhưng giữ nguyên ý định ban đầu.\n"
+            f"Lưu ý: CHỈ trả về duy nhất nội dung câu hỏi đã được diễn giải lại, không thêm bất kỳ văn bản giải thích nào khác.\n"
+            f"Câu hỏi mới nhất: {user_query}"
         )
+
         try:
             condensed, usage_metadata = gemini_service.generate_answer(prompt=prompt)
             condensed_clean = condensed.strip()
@@ -73,7 +56,12 @@ class RAGService:
             logger.error(f"Failed to condense query: {e}")
         return user_query, None
 
-    def query(self, user_query: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
+    async def query(
+        self,
+        user_query: str,
+        history: List[Dict[str, str]] = None,
+        check_cancelled: Optional[Callable[[], Awaitable[None]]] = None
+    ) -> Dict[str, Any]:
         if vector_db.is_empty():
             return {
                 "answer": "Cơ sở dữ liệu pháp luật hiện đang trống. Vui lòng thực hiện ingest dữ liệu trước.",
@@ -87,6 +75,9 @@ class RAGService:
             "total_tokens": 0
         }
 
+        if check_cancelled:
+            await check_cancelled()
+
         t_condense = time.perf_counter()
         search_query = user_query
         if history:
@@ -97,9 +88,12 @@ class RAGService:
                 token_details['total_tokens'] += condense_metadata.total_token_count or 0
         timing_details["condense"] = round(time.perf_counter() - t_condense, 3)
 
+        if check_cancelled:
+            await check_cancelled()
+
         t_search = time.perf_counter()
         dense_results = dense_search(search_query, top_k=20)
-        sparse_results = sparse_search.search(search_query, top_k=20)
+        sparse_results = sparse_search(search_query, top_k=20)
         fused_candidates = reciprocal_rank_fusion(
             dense_results,
             sparse_results,
@@ -108,10 +102,16 @@ class RAGService:
         )
         timing_details["search"] = round(time.perf_counter() - t_search, 3)
 
+        if check_cancelled:
+            await check_cancelled()
+
         t_rerank = time.perf_counter()
         candidates = [chunk for chunk, score in fused_candidates]
-        reranked_ids = gemini_service.rerank(search_query, candidates, top_n=settings.RRF_TOP_N)
+        reranked_ids = jina_service.rerank(search_query, candidates, top_n=settings.RRF_TOP_N)
         timing_details["rerank"] = round(time.perf_counter() - t_rerank, 3)
+
+        if check_cancelled:
+            await check_cancelled()
 
         fused_results = []
         candidate_map = {c["chunk_id"]: c for c in candidates}
@@ -203,7 +203,7 @@ class RAGService:
 
         if any(marker in answer for marker in fallback_markers) or not has_legal_content:
             sources = []
-        print(token_details)
+
         return {
             "answer": answer,
             "sources": sources,

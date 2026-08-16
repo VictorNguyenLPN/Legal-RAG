@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { Source } from './Citations';
+
+export interface Source {
+  chunk_id: string;
+  document_title: string;
+  article_title?: string | null;
+  article_number?: number | null;
+  clause_number?: any;
+  point?: string | null;
+  text: string;
+  rrf_score: number;
+}
 
 interface SourceDetailsProps {
   sources: Source[];

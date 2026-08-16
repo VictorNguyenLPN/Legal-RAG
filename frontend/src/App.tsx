@@ -4,7 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import type { DBStatus } from './components/Sidebar';
 import { Header } from './components/Header';
 import { SearchForm } from './components/SearchForm';
-import type { Source } from './components/Citations';
+import type { Source } from './components/SourceDetails';
 import { SourceDetails } from './components/SourceDetails';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -55,6 +55,14 @@ function App() {
   const [toast, setToast] = useState<Toast | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleCancelSearch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort('user_cancelled');
+      abortControllerRef.current = null;
+    }
+  };
 
   // Sync conversations to localStorage
   useEffect(() => {
@@ -192,9 +200,11 @@ function App() {
     setSearchPhase('Đang nhúng câu truy vấn (Embedding query)...');
     setElapsedTime(0);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      const timeoutId = setTimeout(() => controller.abort('timeout'), 45000);
 
       const res = await fetch(`${API_URL}/query`, {
         method: 'POST',
@@ -250,15 +260,22 @@ function App() {
         );
       }
     } catch (err: any) {
+      let isUserCancelled = false;
       let message = 'Không thể kết nối tới dịch vụ phân tích. Vui lòng kiểm tra lại backend.';
-      if (err.name === 'AbortError') {
-        message = 'Thời gian phản hồi từ máy chủ quá hạn. Vui lòng thử lại sau.';
+
+      if (err.name === 'AbortError' || controller.signal.aborted) {
+        if (controller.signal.reason === 'user_cancelled') {
+          isUserCancelled = true;
+          message = 'Đã hủy gửi câu hỏi.';
+        } else {
+          message = 'Thời gian phản hồi từ máy chủ quá hạn. Vui lòng thử lại sau.';
+        }
       }
 
       const newErrorMsg: ChatMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: `**Lỗi kết nối:** ${message}`
+        content: isUserCancelled ? '_Đã hủy yêu cầu xử lý câu hỏi._' : `**Lỗi kết nối:** ${message}`
       };
       setConversations((prev) =>
         prev.map((c) => {
@@ -271,8 +288,9 @@ function App() {
           return c;
         })
       );
-      showToast(message, 'error');
+      showToast(message, isUserCancelled ? 'info' : 'error');
     } finally {
+      abortControllerRef.current = null;
       setLoadingSearch(false);
     }
   };
@@ -388,11 +406,13 @@ function App() {
               {loadingSearch && (
                 <div className="chat-message-item assistant">
                   <div className="chat-bubble assistant chat-bubble-thinking" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', minWidth: '280px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="spinner spinner-small"></div>
-                      <span className="thinking-text" style={{ fontWeight: '600', color: '#1e293b' }}>
-                        {searchPhase} ({elapsedTime.toFixed(1)}s)
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="spinner spinner-small"></div>
+                        <span className="thinking-text" style={{ fontWeight: '600', color: '#1e293b' }}>
+                          {searchPhase} ({elapsedTime.toFixed(1)}s)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -406,6 +426,7 @@ function App() {
         {/* Input Form at Bottom */}
         <SearchForm
           onSearch={handleSearch}
+          onCancel={handleCancelSearch}
           loading={loadingSearch}
           disabled={dbStatus === null || !dbStatus.database_initialized}
           initialQuery=""

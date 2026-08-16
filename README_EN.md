@@ -26,8 +26,6 @@
 
 ---
 
->[!NOTE] Current Version: v3.0.0 (13/08/2026)
-
 The Legal Document Question-Answering System (Legal RAG) is built entirely in Python, utilizing Hybrid Search (Dense & Sparse) on top of **Qdrant**, Vietnamese word segmentation using **underthesea**, **Listwise Reranking** using Gemini, and generating precise answers with Google Gemini 3.1 Flash.
 
 ## Key Features

@@ -3,13 +3,18 @@ import uuid
 import logging
 from typing import List, Dict, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
+# pyrefly: ignore [missing-import]
 import numpy as np
 from tqdm import tqdm
+# pyrefly: ignore [missing-import]
 from qdrant_client import QdrantClient
+# pyrefly: ignore [missing-import]
 from qdrant_client.http import models
+# pyrefly: ignore [missing-import]
 from fastembed import SparseTextEmbedding
 from backend.app.config import settings
-
+# pyrefly: ignore [missing-import]
+from underthesea import word_tokenize
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +60,7 @@ class VectorDB:
         except Exception as e:
             logger.error(f"Failed to ensure collection: {e}")
 
-    def save(self, chunks: List[Dict], embeddings: Optional[np.ndarray] = None) -> None:
+    def save(self, chunks: List[Dict]) -> None:
         """
         Saves chunks metadata and embeddings directly to Qdrant Cloud.
         """
@@ -92,8 +97,6 @@ class VectorDB:
                         ]
                         formatted_text = "\n".join(parts)
                         formatted_texts.append(formatted_text)
-
-                        from underthesea import word_tokenize
                         tokenized_text = word_tokenize(formatted_text, format="text")
                         texts_for_sparse.append(tokenized_text)
 
@@ -171,7 +174,6 @@ class VectorDB:
 
     def search_sparse(self, query_text: str, top_k: int) -> List[Tuple[Dict, float]]:
         try:
-            from underthesea import word_tokenize
             tokenized_query = word_tokenize(query_text, format="text")
 
             query_sparse = list(self.sparse_model.embed([tokenized_query]))[0]
@@ -193,34 +195,6 @@ class VectorDB:
             return output
         except Exception as e:
             logger.error(f"Sparse search failed: {e}")
-            return []
-
-    def search(self, query_text: str, top_k: int) -> List[Tuple[Dict, float]]:
-        return self.search_dense(query_text, top_k)
-
-    @property
-    def chunks(self) -> List[Dict]:
-        try:
-            if self.is_empty():
-                return []
-            chunks_list = []
-            next_page_offset = None
-            while True:
-                results, next_page_offset = self.client.scroll(
-                    collection_name=self.collection_name,
-                    limit=100,
-                    with_payload=True,
-                    with_vectors=False,
-                    offset=next_page_offset
-                )
-                for point in results:
-                    if point.payload and "chunk_json" in point.payload:
-                        chunks_list.append(json.loads(point.payload["chunk_json"]))
-                if next_page_offset is None:
-                    break
-            return chunks_list
-        except Exception as e:
-            logger.error(f"Failed to scroll chunks: {e}")
             return []
 
     @property

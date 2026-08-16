@@ -24,8 +24,6 @@
 
 ---
 
->[!NOTE] 当前版本：v3.0.0 (2026年8月13日)
-
 本法律文献问答系统（Legal RAG）完全基于 Python 构建，整合了基于 **Qdrant** 的混合检索 (Dense & Sparse) 架构，利用 **underthesea** 进行越南语分词，结合 Gemini **Listwise Reranking**（列表重排）层，并使用 Google Gemini 3.1 Flash 生成高准确度的答案。
 
 ## 项目特点

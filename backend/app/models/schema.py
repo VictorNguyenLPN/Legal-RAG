@@ -53,9 +53,6 @@ class Source(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: List[Source]
-    prompt_tokens: Optional[int] = None
-    response_tokens: Optional[int] = None
-    total_tokens: Optional[int] = None
     token_details: Optional[Dict[str, float]] = None
     timing_details: Optional[Dict[str, float]] = None
 

@@ -10,4 +10,4 @@ def dense_search(query_text: str, top_k: int = None) -> List[Tuple[Dict, float]]
     if top_k is None:
         top_k = settings.DENSE_TOP_K
         
-    return vector_db.search(query_text, top_k)
+    return vector_db.search_dense(query_text, top_k)
