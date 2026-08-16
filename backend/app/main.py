@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    corpus_path = settings.DATA_DIR / "corpus.json"
+    corpus_path = settings.DATA_DIR / "corpus_1.json"
 
     if vector_db.is_empty():
         logger.warning("Database is empty. Finding local corpus ...")
@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"Failed to ingest: {e}")
         else:
-            logger.warning(f"Corpus not found.")
+            logger.warning(f"Corpus not found")
     else:
         logger.info(f"Database is ready: {len(vector_db)} chunks")
     yield

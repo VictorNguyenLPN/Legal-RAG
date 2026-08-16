@@ -1,14 +1,15 @@
 import json
+import logging
 from pathlib import Path
 from typing import List
-# pyrefly: ignore [missing-import]
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from backend.app.models.schema import (
     Chunk, IngestFileRequest, IngestResponse, QueryRequest, QueryResponse
 )
 from backend.app.services.rag_service import rag_service
 from backend.app.database.vector_db import vector_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
@@ -66,7 +67,7 @@ def ingest_from_file(payload: IngestFileRequest):
         )
 
 @router.post("/query", response_model=QueryResponse)
-def query_rag(payload: QueryRequest):
+async def query_rag(payload: QueryRequest, request: Request):
     """
     Query the Hybrid Legal RAG pipeline.
     """
@@ -75,19 +76,26 @@ def query_rag(payload: QueryRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vector database is empty. Please run /ingest first."
         )
-        
+
+    async def check_cancelled():
+        if await request.is_disconnected():
+            logger.info("Client connection closed. Cancelling RAG query processing.")
+            raise HTTPException(status_code=499, detail="Client Closed Request")
+
     try:
         history_list = None
         if payload.history:
             history_list = [{"role": msg.role, "content": msg.content} for msg in payload.history]
-        result = rag_service.query(payload.query, history_list)
-        
+        result = await rag_service.query(payload.query, history_list, check_cancelled=check_cancelled)
+
         return QueryResponse(
             answer=result["answer"],
             sources=result["sources"],
             token_details=result.get("token_details"),
             timing_details=result.get("timing_details")
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

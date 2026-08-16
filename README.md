@@ -24,8 +24,6 @@
 
 ---
 
->[!NOTE] Phiên bản hiện tại: v2.6.0 (14/08/2026)
-
 Hệ thống Hỏi Đáp Văn Bản Pháp Luật (Legal RAG) được xây dựng hoàn toàn bằng Python, tích hợp tìm kiếm kết hợp Hybrid Search (Dense & Sparse) trên nền tảng **Qdrant**, sử dụng bộ tách từ tiếng Việt **underthesea**, kết hợp **Listwise Reranking** bằng Gemini và sinh câu trả lời bằng Google Gemini.
 
 ## Tính năng nổi bật
@@ -264,3 +262,5 @@ Tệp tin JSON phải là một mảng các đối tượng (array of objects), 
   - Cải tiến UI: Thêm trạng thái trung gian "Đang kết nối..." màu vàng lúc tải trang, tích hợp hiển thị thời gian phản hồi trực quan ngay cạnh nhãn trạng thái sinh câu hỏi "Answering...".
 
 - v2.6.1(15/08/2026): Clean source code, bỏ các component không sử dụng
+
+- v2.6.2(16/08/2026): Clean source code, bỏ các component không sử dụng, cho phép mở rộng và scroll search form, sử dụng jina rerank

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     # The new google-genai SDK uses GEMINI_API_KEY by default.
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
+    # Jina AI Reranker settings
+    JINA_API_KEY: str = os.getenv("JINA_API_KEY", "")
+    JINA_RERANK_MODEL: str = "jina-reranker-v2-base-multilingual"
+    
     # Models
     EMBEDDING_MODEL: str = "gemini-embedding-2"
     GENERATION_MODEL: str = "gemini-3.1-flash-lite"

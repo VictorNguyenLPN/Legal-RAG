@@ -24,6 +24,28 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 30, 54, 0.15) transparent;
+}
+
+/* Custom Translucent Lightened Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 30, 54, 0.12);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 128, 0.4);
 }
 
 body {
@@ -340,6 +362,7 @@ body {
 
 .search-form {
   display: flex;
+  align-items: flex-end;
   gap: 0.75rem;
   box-shadow: 0 4px 20px -5px rgba(15, 30, 54, 0.05);
   border-radius: 8px;
@@ -356,13 +379,18 @@ body {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 1rem 1.25rem 1rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   font-family: var(--font-sans);
   font-size: 1.05rem;
   color: var(--color-text-primary);
   background-color: var(--color-bg-card);
   transition: var(--transition-smooth);
   outline: none;
+  resize: none;
+  min-height: 52px;
+  max-height: 180px;
+  line-height: 1.5;
+  overflow-y: auto;
 }
 
 .search-input:focus {
@@ -372,7 +400,7 @@ body {
 
 .search-input::placeholder {
   color: #94A3B8;
-  opacity: 40%;
+  opacity: 60%;
 }
 
 .search-icon {
@@ -385,6 +413,7 @@ body {
 }
 
 .btn-search {
+  height: 52px;
   background-color: var(--color-navy);
   color: #FFFFFF;
   border: 1px solid var(--color-navy);
@@ -412,6 +441,39 @@ body {
 .btn-search:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.btn-search.btn-cancel {
+  background-color: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #FFFFFF;
+}
+
+.btn-search.btn-cancel:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.btn-cancel-bubble {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-smooth);
+}
+
+.btn-cancel-bubble:hover {
+  background: var(--color-danger);
+  color: #FFFFFF;
 }
 
 /* Spinner Loader */
